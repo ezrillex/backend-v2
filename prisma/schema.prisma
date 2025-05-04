@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Shops {
+  id         String     @id @default(uuid(7))
+  name       String
+  RootUrls   RootUrls[]
+  created_at DateTime   @default(now())
+}
+
+model RootUrls {
+  id          String     @id @default(uuid(7))
+  url         String
+  // a que categoria pertenece el url? Instead of having mappings of x->y categories. Adjust it here.
+  category_id String
+  categories  Categories @relation(fields: [category_id], references: [id])
+
+  shop_id    String
+  shop       Shops    @relation(fields: [shop_id], references: [id])
+  created_at DateTime @default(now())
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAIL
+}
+
+model JobQueue {
+  id           String    @id @default(uuid(7))
+  job_data     Json
+  status       JobStatus @default(PENDING)
+  created_at   DateTime  @default(now())
+  processed_at DateTime?
+}
+
+model Categories {
+  id   String @id @default(uuid(7))
+  name String
+
+  urls RootUrls[]
+}
+
+model Products {
+  id          String   @id @default(uuid(7))
+  fingerprint String
+  name        String
+  url         String
+  details     String
+  marca       String? // extract using AI mvp can skip this.
+  modelo      String? // extract using AI mvp can skip this.
+  created_at  DateTime @default(now())
+}
+
+// could extract multiple at once. One for cash, card, installments, etc.
+model Prices {
+  id         String   @id @default(uuid(7))
+  type       String
+  value      Int
+  created_at DateTime @default(now())
+}
