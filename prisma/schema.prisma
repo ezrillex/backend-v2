@@ -8,11 +8,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ShopAdapters {
+  KPC
+  ZD
+}
+
 model Shops {
-  id         String     @id @default(uuid(7))
+  id         String       @id @default(uuid(7))
   name       String
+  adapter    ShopAdapters
   RootUrls   RootUrls[]
-  created_at DateTime   @default(now())
+  enabled    Boolean      @default(true)
+  created_at DateTime     @default(now())
 }
 
 model RootUrls {
@@ -34,10 +41,16 @@ enum JobStatus {
   FAIL
 }
 
+enum Priority {
+  NORMAL
+  NEXT // for when processing multi page jobs, if job determines next page exists, then schedule job with this.
+}
+
 model JobQueue {
   id           String    @id @default(uuid(7))
   job_data     Json
   status       JobStatus @default(PENDING)
+  priority     Priority  @default(NORMAL)
   created_at   DateTime  @default(now())
   processed_at DateTime?
 }
@@ -50,20 +63,30 @@ model Categories {
 }
 
 model Products {
-  id          String   @id @default(uuid(7))
-  fingerprint String
-  name        String
-  url         String
-  details     String
-  marca       String? // extract using AI mvp can skip this.
-  modelo      String? // extract using AI mvp can skip this.
-  created_at  DateTime @default(now())
+  id           String   @id @default(uuid(7))
+  fingerprint  String
+  name         String
+  url          String
+  details      String
+  marca        String? // extract using AI mvp can skip this.
+  modelo       String? // extract using AI mvp can skip this.
+  last_updated DateTime @updatedAt
+  created_at   DateTime @default(now())
 }
 
 // could extract multiple at once. One for cash, card, installments, etc.
+// then just get the latest unique prices. Watch out for showing like a discounted old price tho.
+// maybe do 24 hour check for latest.
 model Prices {
   id         String   @id @default(uuid(7))
   type       String
   value      Int
   created_at DateTime @default(now())
+}
+
+model Logs {
+  id        String   @id @default(uuid(7))
+  type      String
+  data      String   @db.Text
+  timestamp DateTime @default(now())
 }
