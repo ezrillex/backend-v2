@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -8,30 +7,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// is this necessary?
 enum ShopAdapters {
   KPC
   ZD
 }
 
 model Shops {
-  id         String       @id @default(uuid(7))
+  id         BigInt       @id @default(autoincrement())
   name       String
   adapter    ShopAdapters
   RootUrls   RootUrls[]
+  productos  Products[]
   enabled    Boolean      @default(true)
   created_at DateTime     @default(now())
 }
 
 model RootUrls {
-  id          String     @id @default(uuid(7))
+  id          BigInt     @id @default(autoincrement())
   url         String
   // a que categoria pertenece el url? Instead of having mappings of x->y categories. Adjust it here.
-  category_id String
+  category_id BigInt
   categories  Categories @relation(fields: [category_id], references: [id])
 
-  shop_id    String
-  shop       Shops    @relation(fields: [shop_id], references: [id])
-  created_at DateTime @default(now())
+  shop_id    BigInt
+  shop       Shops      @relation(fields: [shop_id], references: [id])
+  created_at DateTime   @default(now())
+  JobQueue   JobQueue[]
 }
 
 enum JobStatus {
@@ -42,51 +44,86 @@ enum JobStatus {
 }
 
 enum Priority {
-  NORMAL
-  NEXT // for when processing multi page jobs, if job determines next page exists, then schedule job with this.
+  PRODUCT
+  PAGE
+  NEXT_PAGE // prioritize flipping pages before doing product scrapes or other category page scrape.
 }
 
 model JobQueue {
-  id           String    @id @default(uuid(7))
-  job_data     Json
-  status       JobStatus @default(PENDING)
-  priority     Priority  @default(NORMAL)
+  id       BigInt    @id @default(autoincrement())
+  job_data Json
+  status   JobStatus @default(PENDING)
+  priority Priority
+
+  root_url_id BigInt
+  root_url    RootUrls @relation(fields: [root_url_id], references: [id])
+
   created_at   DateTime  @default(now())
   processed_at DateTime?
 }
 
 model Categories {
-  id   String @id @default(uuid(7))
+  id   BigInt @id @default(autoincrement())
   name String
 
-  urls RootUrls[]
+  urls      RootUrls[]
+  productos Products[]
 }
 
 model Products {
-  id           String   @id @default(uuid(7))
-  fingerprint  String
-  name         String
-  url          String
-  details      String
-  marca        String? // extract using AI mvp can skip this.
-  modelo       String? // extract using AI mvp can skip this.
+  id          BigInt  @id @default(autoincrement())
+  fingerprint String  @unique
+  name        String
+  url         String
+  details     String
+  marca       String? // extract using AI mvp can skip this.
+  modelo      String? // extract using AI mvp can skip this.
+
+  precios  Prices[]
+  imagenes Images[]
+
   last_updated DateTime @updatedAt
   created_at   DateTime @default(now())
+
+  categoria    Categories @relation(fields: [categoria_id], references: [id])
+  categoria_id BigInt
+
+  tienda    Shops  @relation(fields: [tienda_id], references: [id])
+  tienda_id BigInt
 }
 
-// could extract multiple at once. One for cash, card, installments, etc.
-// then just get the latest unique prices. Watch out for showing like a discounted old price tho.
-// maybe do 24 hour check for latest.
+model Images {
+  id          BigInt   @id @default(autoincrement())
+  scraped_url String   @unique
+  cdn_url     String? // url to our hosted file.
+  created_at  DateTime @default(now())
+
+  producto    Products @relation(fields: [producto_id], references: [id])
+  producto_id BigInt
+}
+
 model Prices {
-  id         String   @id @default(uuid(7))
-  type       String
+  id         BigInt   @id @default(autoincrement())
   value      Int
   created_at DateTime @default(now())
+
+  producto    Products @relation(fields: [producto_id], references: [id])
+  producto_id BigInt
 }
 
 model Logs {
-  id        String   @id @default(uuid(7))
-  type      String
-  data      String   @db.Text
-  timestamp DateTime @default(now())
+  id         BigInt   @id @default(autoincrement())
+  type       String
+  data       String   @db.Text
+  created_at DateTime @default(now())
 }
+
+model ParseDictionary {
+  id     BigInt @id @default(autoincrement())
+  input  String
+  output String
+
+  created_at DateTime @default(now())
+}
+
+// todo search analytics table.
