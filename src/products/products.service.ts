@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/common/prisma/prisma.service';
+import { PrismaService } from 'src/core/prisma/prisma.service';
 
 @Injectable()
 export class ProductsService {
@@ -7,9 +7,9 @@ export class ProductsService {
   async save_scraped_product_information(
     fingerprint: string,
     nombre: string,
-    categoria: number,
+    categoria: bigint,
     url: string,
-    tienda: number,
+    tienda: bigint,
     imagenes: string[],
     precio: number,
     descripcion: string,

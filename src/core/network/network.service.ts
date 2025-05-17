@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { LogService } from 'src/common/log/log.service';
-import { UtilsService } from '../utils/utils.service';
+import { LogService } from 'src/core/log/log.service';
 
 @Injectable()
 export class NetworkService {

@@ -2,18 +2,31 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ShopAdaptersModule } from './shop_adapters/shop-adapters.module';
-import { CommonModule } from './common/common.module';
-import { ProductsModule } from './products/products.module';
+import { TasksService } from './tasks/tasks.service';
+import { LogService } from './core/log/log.service';
+import { NetworkService } from './core/network/network.service';
+import { PrismaService } from './core/prisma/prisma.service';
+import { UtilsService } from './core/utils/utils.service';
+import { ProductsService } from './products/products.service';
+import { KpcService } from './shop_adapters/kpc/kpc.service';
+import { ZdService } from './shop_adapters/zd/zd.service';
+import { SchedulerService } from './scheduler/scheduler.service';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
-  imports: [
-    ScheduleModule.forRoot(),
-    ShopAdaptersModule,
-    CommonModule,
-    ProductsModule,
-  ],
+  imports: [ScheduleModule.forRoot(), HttpModule],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    TasksService,
+    LogService,
+    NetworkService,
+    PrismaService,
+    UtilsService,
+    ProductsService,
+    KpcService,
+    ZdService,
+    SchedulerService,
+  ],
 })
 export class AppModule {}

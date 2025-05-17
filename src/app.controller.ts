@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 import { KpcService } from './shop_adapters/kpc/kpc.service';
-import { PrismaService } from './common/prisma/prisma.service';
+import { PrismaService } from './core/prisma/prisma.service';
+import { TasksService } from './tasks/tasks.service';
 
 @Controller()
 export class AppController {
@@ -9,6 +10,7 @@ export class AppController {
     private readonly appService: AppService,
     private readonly kpc: KpcService,
     private readonly prisma: PrismaService,
+    private readonly tasksService: TasksService,
   ) {}
 
   @Get()
@@ -24,24 +26,29 @@ export class AppController {
   }
 
   @Get('debug')
-  debug() {
-    return this.kpc.scrape({
-      url: '[REDACTED]',
-      priority: 'PRODUCT',
-      category_id: 1,
-      tienda_id: 2,
-      root_url_id: 1,
-    });
+  async debug() {
+    const result = await this.kpc.scrape(
+      {
+        url: '[REDACTED]',
+      },
+      1n,
+      2n,
+      1n,
+      'PRODUCT',
+    );
+    await this.tasksService.finishJob(result, 26n);
   }
 
   @Get('debug_page')
   debugPage() {
-    return this.kpc.scrape({
-      url: '[REDACTED]',
-      priority: 'PAGE',
-      category_id: 1,
-      tienda_id: 2,
-      root_url_id: 1,
-    });
+    return this.kpc.scrape(
+      {
+        url: '[REDACTED]',
+      },
+      1n,
+      2n,
+      1n,
+      'PAGE',
+    );
   }
 }

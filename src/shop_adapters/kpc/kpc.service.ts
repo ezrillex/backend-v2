@@ -1,38 +1,43 @@
 import { Injectable } from '@nestjs/common';
 import { IshopAdapter } from '../ishop-adapter';
-import { NetworkService } from '../../common/network/network.service';
+import { NetworkService } from '../../core/network/network.service';
 import * as cheerio from 'cheerio';
 import { Priority } from '@prisma/client';
-import { UtilsService } from '../../common/utils/utils.service';
+import { UtilsService } from '../../core/utils/utils.service';
 import { ProductsService } from '../../products/products.service';
-import { TasksService } from '../../common/tasks/tasks.service';
+import { TasksService } from 'src/tasks/tasks.service';
+import { SchedulerService } from '../../scheduler/scheduler.service';
 
 @Injectable()
-export class KpcService implements IshopAdapter {
+export class KpcService
+  implements
+    IshopAdapter<{
+      url: string;
+      page?: number;
+    }>
+{
   constructor(
     private readonly networkService: NetworkService,
     private readonly utils: UtilsService,
     private readonly productsService: ProductsService,
-    private readonly tasksService: TasksService,
+    private readonly schedulerService: SchedulerService,
   ) {}
 
-  async scrape(job: {
-    url: string;
-    priority: Priority;
-    category_id: number;
-    tienda_id: number;
-    root_url_id: number;
-    page?: number;
-  }): Promise<string> {
+  async scrape(
+    job_data: {
+      url: string;
+      page?: number;
+    },
+    category_id: bigint,
+    tienda_id: bigint,
+    root_url_id: bigint,
+    priority: Priority,
+  ): Promise<string> {
     let outcome: string;
-    if (job.priority === Priority.PAGE || job.priority === Priority.NEXT_PAGE) {
-      outcome = await this.handlePage(job.url, job.root_url_id, job.page);
-    } else if (job.priority === Priority.PRODUCT) {
-      outcome = await this.handleProduct(
-        job.url,
-        job.category_id,
-        job.tienda_id,
-      );
+    if (priority === Priority.PAGE || priority === Priority.NEXT_PAGE) {
+      outcome = await this.handlePage(job_data.url, root_url_id, job_data.page);
+    } else if (priority === Priority.PRODUCT) {
+      outcome = await this.handleProduct(job_data.url, category_id, tienda_id);
     } else {
       // todo fail the job as unkown priority / not set.
       outcome = 'priority-switch-failure';
@@ -41,7 +46,7 @@ export class KpcService implements IshopAdapter {
     // update the job w/ outcome.
     return outcome;
   }
-  async handlePage(url: string, root_url_id: number, page?: number) {
+  async handlePage(url: string, root_url_id: bigint, page?: number) {
     const { status, data } = await this.networkService.get(url);
 
     // todo validacion de pagina no vacia
@@ -60,7 +65,7 @@ export class KpcService implements IshopAdapter {
       // todo validacion que sea un url valido.
       product_urls.push(product_url);
     }
-    await this.tasksService.createManyJobs(
+    await this.schedulerService.createManyJobs(
       product_urls.map((data) => ({
         job_data: { url: data },
         root_url_id: root_url_id,
@@ -94,7 +99,7 @@ export class KpcService implements IshopAdapter {
         new_page = 2;
       }
 
-      await this.tasksService.createJob('NEXT_PAGE', root_url_id, {
+      await this.schedulerService.createJob('NEXT_PAGE', root_url_id, {
         url: new_job_url,
         page: page ?? 2,
       });
@@ -103,7 +108,7 @@ export class KpcService implements IshopAdapter {
     return 'success';
   }
 
-  async handleProduct(url: string, category_id: number, tienda_id: number) {
+  async handleProduct(url: string, category_id: bigint, tienda_id: bigint) {
     const { status, data } = await this.networkService.get(url);
 
     //console.log(status, data);
@@ -112,9 +117,11 @@ export class KpcService implements IshopAdapter {
     const nombre = $('h1[itemprop="name"]').text().trim();
     console.log(nombre);
 
-    const precio = $('span[itemprop="price"]').text().trim();
+    const precio = $('#our_price_display').text().trim();
     console.log(precio);
     const precioNumerico = parseInt(precio.replace('$', '').replace('.', ''));
+    console.log(precioNumerico);
+    console.log($('#our_price_display').length);
 
     const img_elements = $('img.thumb.js-thumb').toArray();
     const imagenes: string[] = [];

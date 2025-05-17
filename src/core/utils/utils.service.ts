@@ -5,6 +5,8 @@ import { promisify } from 'util';
 
 @Injectable()
 export class UtilsService {
+  constructor() {}
+
   gzipAsync = promisify(gzip);
 
   hash(data: string) {
