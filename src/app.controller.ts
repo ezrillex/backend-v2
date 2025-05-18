@@ -25,30 +25,35 @@ export class AppController {
     console.log('DB TIME: ', time);
   }
 
-  @Get('debug')
-  async debug() {
-    const result = await this.kpc.scrape(
-      {
-        url: '[REDACTED]',
-      },
-      1n,
-      2n,
-      1n,
-      'PRODUCT',
-    );
-    await this.tasksService.finishJob(result, 26n);
-  }
+  // @Get('debug')
+  // async debug() {
+  //   const result = await this.kpc.scrape(
+  //     {
+  //       url: '[REDACTED]',
+  //     },
+  //     1n,
+  //     2n,
+  //     1n,
+  //     'PRODUCT',
+  //   );
+  //   await this.tasksService.finishJob(result, 26n);
+  // }
+  //
+  // @Get('debug_page')
+  // debugPage() {
+  //   return this.kpc.scrape(
+  //     {
+  //       url: '[REDACTED]',
+  //     },
+  //     1n,
+  //     2n,
+  //     1n,
+  //     'PAGE',
+  //   );
+  // }
 
-  @Get('debug_page')
-  debugPage() {
-    return this.kpc.scrape(
-      {
-        url: '[REDACTED]',
-      },
-      1n,
-      2n,
-      1n,
-      'PAGE',
-    );
+  @Get('debug_scheduler')
+  async testDebugScheduler() {
+    await this.tasksService.scheduleDailyTasks();
   }
 }

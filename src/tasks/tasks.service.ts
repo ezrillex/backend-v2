@@ -5,13 +5,15 @@ import { JobStatus, Priority } from '@prisma/client';
 import { LogService } from '../core/log/log.service';
 import { KpcService } from '../shop_adapters/kpc/kpc.service';
 import { JsonValue } from '@prisma/client/runtime/library';
+import { SchedulerService } from 'src/scheduler/scheduler.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly logs: LogService,
     private readonly kpcService: KpcService,
+    private readonly schedulerService: SchedulerService,
+    private readonly logs: LogService,
   ) {}
 
   @Cron('* * * * *')
@@ -29,7 +31,7 @@ export class TasksService {
   @Cron('* * * * *')
   async scrapeTask() {
     // get next jobs from database, lock job
-    const job_ids: { id: number }[] = await this.prisma
+    const job_ids: { id: string }[] = await this.prisma
       .$queryRaw`SELECT DISTINCT ON (r.shop_id) jq.id
 FROM "JobQueue" jq
 JOIN "RootUrls" r ON jq.root_url_id = r.id
@@ -80,13 +82,13 @@ ORDER BY r.shop_id,
   }
 
   async processJob(job: {
-    id: bigint;
+    id: string;
     job_data: JsonValue;
     priority: Priority;
-    root_url_id: bigint;
+    root_url_id: string;
     root_url: {
-      category_id: bigint;
-      shop_id: bigint;
+      category_id: string;
+      shop_id: string;
     };
   }) {
     // todo switch case
@@ -105,11 +107,18 @@ ORDER BY r.shop_id,
       await this.finishJob(result, job.id);
     } catch (error) {
       // unlock jobs update statuses
-      await this.finishJob('failure-promise-error', job.id);
+      await this.finishJob('promise-error', job.id);
+      await this.logs.log(
+        'job-promise-error',
+        JSON.stringify({
+          id: job.id,
+          error: error,
+        }),
+      );
     }
   }
 
-  async finishJob(outcome: string, job_id: bigint) {
+  async finishJob(outcome: string, job_id: string) {
     let dbState = outcome === 'success' ? JobStatus.SUCCESS : JobStatus.FAIL;
 
     await this.prisma.jobQueue.update({
@@ -125,7 +134,23 @@ ORDER BY r.shop_id,
 
   // job that schedules next batch of jobs
   @Cron('0 3 * * *')
-  scheduleDailyTasks() {
+  async scheduleDailyTasks() {
+    console.log('daily work schedule start ');
+    const start = performance.now();
+    // todo mechanism to check if this job didnt run and try to run it. maybe on startup or hourly / half hourly.
     // for each root url schedule a job
+    const rootJobs = await this.prisma.rootUrls.findMany({
+      select: { id: true, url: true },
+    });
+
+    await this.schedulerService.createManyJobs(
+      rootJobs.map((data) => ({
+        job_data: { url: data.url },
+        root_url_id: data.id,
+        priority: Priority.PAGE,
+      })),
+    );
+
+    console.log(`finished daily schedule in: ${performance.now() - start}ms`);
   }
 }

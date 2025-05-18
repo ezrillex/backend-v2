@@ -5,7 +5,6 @@ import * as cheerio from 'cheerio';
 import { Priority } from '@prisma/client';
 import { UtilsService } from '../../core/utils/utils.service';
 import { ProductsService } from '../../products/products.service';
-import { TasksService } from 'src/tasks/tasks.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 
 @Injectable()
@@ -28,9 +27,9 @@ export class KpcService
       url: string;
       page?: number;
     },
-    category_id: bigint,
-    tienda_id: bigint,
-    root_url_id: bigint,
+    category_id: string,
+    tienda_id: string,
+    root_url_id: string,
     priority: Priority,
   ): Promise<string> {
     let outcome: string;
@@ -46,7 +45,7 @@ export class KpcService
     // update the job w/ outcome.
     return outcome;
   }
-  async handlePage(url: string, root_url_id: bigint, page?: number) {
+  async handlePage(url: string, root_url_id: string, page?: number) {
     const { status, data } = await this.networkService.get(url);
 
     // todo validacion de pagina no vacia
@@ -54,7 +53,7 @@ export class KpcService
     //console.log(status, data);
     const $ = cheerio.load(data);
     const articles = $('article').toArray();
-    const product_urls = [];
+    const product_urls: string[] = [];
     for (const article of articles) {
       //const product_name = $(article).find('h2').text().trim();
       // const product_image = $(article)
@@ -65,8 +64,13 @@ export class KpcService
       // todo validacion que sea un url valido.
       product_urls.push(product_url);
     }
+    console.log('url de productos');
+    console.log(product_urls);
+    console.log('sin duplicados?');
+    const unique_product_urls: string[] = [...new Set(product_urls)];
+    console.log(unique_product_urls);
     await this.schedulerService.createManyJobs(
-      product_urls.map((data) => ({
+      unique_product_urls.map((data) => ({
         job_data: { url: data },
         root_url_id: root_url_id,
         priority: 'PRODUCT',
@@ -101,14 +105,14 @@ export class KpcService
 
       await this.schedulerService.createJob('NEXT_PAGE', root_url_id, {
         url: new_job_url,
-        page: page ?? 2,
+        page: new_page,
       });
     }
 
     return 'success';
   }
 
-  async handleProduct(url: string, category_id: bigint, tienda_id: bigint) {
+  async handleProduct(url: string, category_id: string, tienda_id: string) {
     const { status, data } = await this.networkService.get(url);
 
     //console.log(status, data);
@@ -139,10 +143,11 @@ export class KpcService
     let marca = $('img.manufacturer-logo').attr('src');
     // todo integrar con servicio de mapeo / diccionario para traducir el link a un string de marca conocido.
     // todo fallback si no hay entonces consultar con IA.
-    console.log(marca);
-    if (marca.length === 0) {
+    console.log('marca: ', marca);
+    if (!marca) {
       marca = 'FAILED-TO-GET-BRAND';
     }
+    console.log('marca: ', marca);
 
     console.log('url del producto');
     console.log(url);

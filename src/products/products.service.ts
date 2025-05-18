@@ -7,16 +7,16 @@ export class ProductsService {
   async save_scraped_product_information(
     fingerprint: string,
     nombre: string,
-    categoria: bigint,
+    categoria: string,
     url: string,
-    tienda: bigint,
+    tienda: string,
     imagenes: string[],
     precio: number,
     descripcion: string,
     marca?: string,
   ) {
     // product exists?
-    const exists = await this.prisma.products.count({
+    const exists = await this.prisma.products.findFirst({
       where: {
         fingerprint: fingerprint,
       },

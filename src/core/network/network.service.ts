@@ -47,7 +47,12 @@ export class NetworkService {
     await this.logs.logMany([
       {
         type: 'network',
-        data: JSON.stringify({ status, headers, config, statusText }),
+        data: JSON.stringify({
+          status,
+          headers,
+          config,
+          statusText,
+        }),
       },
       {
         type: 'network-data',

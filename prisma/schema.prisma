@@ -14,7 +14,7 @@ enum ShopAdapters {
 }
 
 model Shops {
-  id         BigInt       @id @default(autoincrement())
+  id         String       @id @default(uuid(7))
   name       String
   adapter    ShopAdapters
   RootUrls   RootUrls[]
@@ -24,13 +24,13 @@ model Shops {
 }
 
 model RootUrls {
-  id          BigInt     @id @default(autoincrement())
+  id          String     @id @default(uuid(7))
   url         String
   // a que categoria pertenece el url? Instead of having mappings of x->y categories. Adjust it here.
-  category_id BigInt
+  category_id String
   categories  Categories @relation(fields: [category_id], references: [id])
 
-  shop_id    BigInt
+  shop_id    String
   shop       Shops      @relation(fields: [shop_id], references: [id])
   created_at DateTime   @default(now())
   JobQueue   JobQueue[]
@@ -50,12 +50,12 @@ enum Priority {
 }
 
 model JobQueue {
-  id       BigInt    @id @default(autoincrement())
+  id       String    @id @default(uuid(7))
   job_data Json
   status   JobStatus @default(PENDING)
   priority Priority
 
-  root_url_id BigInt
+  root_url_id String
   root_url    RootUrls @relation(fields: [root_url_id], references: [id])
 
   created_at   DateTime  @default(now())
@@ -63,7 +63,7 @@ model JobQueue {
 }
 
 model Categories {
-  id   BigInt @id @default(autoincrement())
+  id   String @id @default(uuid(7))
   name String
 
   urls      RootUrls[]
@@ -71,7 +71,7 @@ model Categories {
 }
 
 model Products {
-  id          BigInt  @id @default(autoincrement())
+  id          String  @id @default(uuid(7))
   fingerprint String  @unique
   name        String
   url         String
@@ -86,40 +86,40 @@ model Products {
   created_at   DateTime @default(now())
 
   categoria    Categories @relation(fields: [categoria_id], references: [id])
-  categoria_id BigInt
+  categoria_id String
 
   tienda    Shops  @relation(fields: [tienda_id], references: [id])
-  tienda_id BigInt
+  tienda_id String
 }
 
 model Images {
-  id          BigInt   @id @default(autoincrement())
+  id          String   @id @default(uuid(7))
   scraped_url String   @unique
   cdn_url     String? // url to our hosted file.
   created_at  DateTime @default(now())
 
   producto    Products @relation(fields: [producto_id], references: [id])
-  producto_id BigInt
+  producto_id String
 }
 
 model Prices {
-  id         BigInt   @id @default(autoincrement())
+  id         String   @id @default(uuid(7))
   value      Int
   created_at DateTime @default(now())
 
   producto    Products @relation(fields: [producto_id], references: [id])
-  producto_id BigInt
+  producto_id String
 }
 
 model Logs {
-  id         BigInt   @id @default(autoincrement())
+  id         String   @id @default(uuid(7))
   type       String
   data       String   @db.Text
   created_at DateTime @default(now())
 }
 
 model ParseDictionary {
-  id     BigInt @id @default(autoincrement())
+  id     String @id @default(uuid(7))
   input  String
   output String
 
