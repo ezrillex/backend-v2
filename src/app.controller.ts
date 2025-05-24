@@ -1,10 +1,19 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { KpcService } from './shop_adapters/kpc/kpc.service';
 import { PrismaService } from './core/prisma/prisma.service';
 import { TasksService } from './tasks/tasks.service';
 import { SearchService } from './search/search.service';
 import { SchedulerService } from './scheduler/scheduler.service';
+import { Search } from './search/dtos/search/search.dto';
+import { GetProduct } from './search/dtos/get-product/get-product';
 
 @Controller()
 export class AppController {
@@ -15,30 +24,26 @@ export class AppController {
     private readonly tasksService: TasksService,
     private readonly searchService: SearchService,
     private readonly schedulerService: SchedulerService,
-  ) {}
-
-  @Get()
-  getHello(): string {
-    return this.appService.getHello();
-  }
-
-  @Get('time')
-  async testTime() {
-    console.log('JS TIME: ', new Date());
-    const time = await this.prisma.$queryRaw`SELECT NOW();`;
-    console.log('DB TIME: ', time);
-  }
-
-  @Get('debug')
-  async debug() {
-    await this.schedulerService.createJob(
-      'PRODUCT',
-      '9ef29768-e8bb-42e0-92d3-06f86801553f',
-      {
-        url: '[REDACTED]',
-      },
-    );
-
+  ) {
+    // @Get()
+    // getHello(): string {
+    //   return this.appService.getHello();
+    // }
+    // @Get('time')
+    // async testTime() {
+    //   console.log('JS TIME: ', new Date());
+    //   const time = await this.prisma.$queryRaw`SELECT NOW();`;
+    //   console.log('DB TIME: ', time);
+    // }
+    // @Get('debug')
+    // async debug() {
+    //   await this.schedulerService.createJob(
+    //     'PRODUCT',
+    //     '9ef29768-e8bb-42e0-92d3-06f86801553f',
+    //     {
+    //       url: '[REDACTED]',
+    //     },
+    //   );
     // const result = await this.kpc.scrape(
     //   {
     //     url: '[REDACTED]',
@@ -67,20 +72,34 @@ export class AppController {
   //   );
   // }
 
-  @Get('debug_scheduler')
-  async testDebugScheduler() {
-    await this.tasksService.scheduleDailyTasks();
+  // @Get('debug_scheduler')
+  // async testDebugScheduler() {
+  //   await this.tasksService.scheduleDailyTasks();
+  // }
+  //
+  // @Get('debug_search')
+  // async testDebugSearch(@Query('query') query: string) {
+  //   // todo sanitization!!!
+  //   return await this.searchService.search(query);
+  // }
+  //
+  // // todo add uuid class validator.
+  // @Get('debug_producto/:id')
+  // async testProductSearch(@Param('id') id: string) {
+  //   return this.searchService.getProduct(id);
+  // }
+
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @Get('search/:query')
+  async search(@Param() params: Search) {
+    console.log(params.query);
+    return this.searchService.search(params.query);
   }
 
-  @Get('debug_search')
-  async testDebugSearch(@Query('query') query: string) {
-    // todo sanitization!!!
-    return await this.searchService.search(query);
-  }
-
-  // todo add uuid class validator.
-  @Get('debug_producto/:id')
-  async testProductSearch(@Param('id') id: string) {
-    return this.searchService.getProduct(id);
+  @UsePipes(new ValidationPipe({ transform: true }))
+  @Get('product/:id')
+  async getProduct(@Param() params: GetProduct) {
+    console.log(params.id);
+    return this.searchService.getProduct(params.id);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { Charset, Encoder, Index } from 'flexsearch';
 import stripAnsi from 'strip-ansi-cjs';
@@ -41,10 +41,8 @@ export class SearchService implements OnModuleInit {
   }
 
   async search(query: string) {
-    const sanitized_query = stripAnsi(query).trim().slice(0, 150);
-
     const ids = (await this.index.search({
-      query: sanitized_query,
+      query,
     })) as string[];
 
     // todo select solo los campos mostrados en search results.
@@ -69,7 +67,7 @@ export class SearchService implements OnModuleInit {
     await this.logs.log(
       'search',
       JSON.stringify({
-        query: sanitized_query,
+        query,
         result_count: results.length,
       }),
     );
@@ -78,7 +76,7 @@ export class SearchService implements OnModuleInit {
   }
 
   async getProduct(id: string) {
-    return this.prisma.products.findUnique({
+    const result = await this.prisma.products.findUnique({
       where: { id },
       include: {
         categoria: true,
@@ -92,5 +90,20 @@ export class SearchService implements OnModuleInit {
         tienda: true,
       },
     });
+
+    // analytics
+    await this.logs.log(
+      'get-product',
+      JSON.stringify({
+        id,
+        valid: !!result,
+      }),
+    );
+
+    if (!result) {
+      throw new NotFoundException('Product ID not found');
+    } else {
+      return result;
+    }
   }
 }
