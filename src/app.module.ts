@@ -12,6 +12,7 @@ import { KpcService } from './shop_adapters/kpc/kpc.service';
 import { ZdService } from './shop_adapters/zd/zd.service';
 import { SchedulerService } from './scheduler/scheduler.service';
 import { HttpModule } from '@nestjs/axios';
+import { SearchService } from './search/search.service';
 
 @Module({
   imports: [ScheduleModule.forRoot(), HttpModule],
@@ -27,6 +28,7 @@ import { HttpModule } from '@nestjs/axios';
     KpcService,
     ZdService,
     SchedulerService,
+    SearchService,
   ],
 })
 export class AppModule {}

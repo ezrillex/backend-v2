@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import { KpcService } from './shop_adapters/kpc/kpc.service';
 import { PrismaService } from './core/prisma/prisma.service';
 import { TasksService } from './tasks/tasks.service';
+import { SearchService } from './search/search.service';
 
 @Controller()
 export class AppController {
@@ -11,6 +12,7 @@ export class AppController {
     private readonly kpc: KpcService,
     private readonly prisma: PrismaService,
     private readonly tasksService: TasksService,
+    private readonly searchService: SearchService,
   ) {}
 
   @Get()
@@ -55,5 +57,11 @@ export class AppController {
   @Get('debug_scheduler')
   async testDebugScheduler() {
     await this.tasksService.scheduleDailyTasks();
+  }
+
+  @Get('debug_search')
+  async testDebugSearch(@Query('query') query: string) {
+    // todo sanitization!!!
+    return await this.searchService.search(query);
   }
 }
