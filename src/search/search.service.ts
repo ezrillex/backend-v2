@@ -1,10 +1,15 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { Charset, Encoder, Index } from 'flexsearch';
+import stripAnsi from 'strip-ansi-cjs';
+import { LogService } from '../core/log/log.service';
 
 @Injectable()
 export class SearchService implements OnModuleInit {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly logs: LogService,
+  ) {}
 
   index: Index<string>;
 
@@ -30,17 +35,20 @@ export class SearchService implements OnModuleInit {
     });
 
     for (const product of product_names) {
-      this.index.add(product.id, product.name);
+      await this.index.add(product.id, product.name);
     }
     console.log(`indexing finished at ${performance.now() - start}ms`);
   }
 
   async search(query: string) {
+    const sanitized_query = stripAnsi(query).trim().slice(0, 150);
+
     const ids = (await this.index.search({
-      query: query,
+      query: sanitized_query,
     })) as string[];
 
-    return this.prisma.products.findMany({
+    // todo select solo los campos mostrados en search results.
+    const results = await this.prisma.products.findMany({
       include: {
         precios: {
           orderBy: {
@@ -48,11 +56,40 @@ export class SearchService implements OnModuleInit {
           },
           take: 1, // is this limit?
         },
+        tienda: true,
       },
       where: {
         id: {
           in: ids,
         },
+      },
+    });
+
+    // analytics
+    await this.logs.log(
+      'search',
+      JSON.stringify({
+        query: sanitized_query,
+        result_count: results.length,
+      }),
+    );
+
+    return results;
+  }
+
+  async getProduct(id: string) {
+    return this.prisma.products.findUnique({
+      where: { id },
+      include: {
+        categoria: true,
+        imagenes: true,
+        precios: {
+          orderBy: {
+            created_at: 'desc',
+          },
+          take: 1, // is this limit?
+        },
+        tienda: true,
       },
     });
   }
