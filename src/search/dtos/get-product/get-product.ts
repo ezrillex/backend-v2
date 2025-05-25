@@ -1,11 +1,6 @@
-import { IsString, IsUUID, Length, MaxLength } from 'class-validator';
-import stripAnsi from 'strip-ansi-cjs';
-import { Transform } from 'class-transformer';
+import { IsUUID } from 'class-validator';
 
 export class GetProduct {
-  // @Transform(({ value }) => {
-  //   return stripAnsi(value).trim();
-  // })
   @IsUUID('7')
   id: string;
 }

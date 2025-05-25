@@ -24,40 +24,19 @@ export class AppController {
     private readonly tasksService: TasksService,
     private readonly searchService: SearchService,
     private readonly schedulerService: SchedulerService,
-  ) {
-    // @Get()
-    // getHello(): string {
-    //   return this.appService.getHello();
-    // }
-    // @Get('time')
-    // async testTime() {
-    //   console.log('JS TIME: ', new Date());
-    //   const time = await this.prisma.$queryRaw`SELECT NOW();`;
-    //   console.log('DB TIME: ', time);
-    // }
-    // @Get('debug')
-    // async debug() {
-    //   await this.schedulerService.createJob(
-    //     'PRODUCT',
-    //     '9ef29768-e8bb-42e0-92d3-06f86801553f',
-    //     {
-    //       url: '[REDACTED]',
-    //     },
-    //   );
-    // const result = await this.kpc.scrape(
-    //   {
-    //     url: '[REDACTED]',
-    //   },
-    //   'cd402077-3111-42be-a28c-597f4da2faa3',
-    //   '3a8e18a2-0a6f-4ad6-a926-c3079ea9c306',
-    //   '9ef29768-e8bb-42e0-92d3-06f86801553f',
-    //   'PRODUCT',
-    // );
-    // await this.tasksService.finishJob(
-    //   result,
-    //   '0196e47c-1e5c-7aa1-9f54-7205e5cbdf26',
-    // );
-  }
+  ) {}
+
+  // @Get('debug')
+  // async debug() {
+  //   await this.schedulerService.createJob(
+  //     'PRODUCT',
+  //     '9ef29768-e8bb-42e0-92d3-06f86801553f',
+  //     {
+  //       url: '[REDACTED]',
+  //     },
+  //   );
+  // }
+
   //
   // @Get('debug_page')
   // debugPage() {

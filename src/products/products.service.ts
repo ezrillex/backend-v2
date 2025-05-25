@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
+import { SearchService } from '../search/search.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly searchService: SearchService,
+  ) {}
   async save_scraped_product_information(
     fingerprint: string,
     nombre: string,
@@ -49,7 +53,7 @@ export class ProductsService {
       });
     } else {
       // new record
-      await this.prisma.products.create({
+      const record = await this.prisma.products.create({
         data: {
           fingerprint: fingerprint,
           name: nombre,
@@ -79,6 +83,8 @@ export class ProductsService {
           },
         },
       });
+      // add to index
+      await this.searchService.addNewProductToIndex(record.id, record.name);
     }
   }
 }

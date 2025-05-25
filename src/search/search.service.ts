@@ -92,4 +92,8 @@ export class SearchService implements OnModuleInit {
       return result;
     }
   }
+
+  async addNewProductToIndex(id: string, name: string) {
+    await this.index.add(id, name);
+  }
 }
