@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
-import { Charset, Encoder, Index } from 'flexsearch';
-import stripAnsi from 'strip-ansi-cjs';
+import { Charset, Index } from 'flexsearch';
 import { LogService } from '../core/log/log.service';
 
 @Injectable()
@@ -18,13 +17,13 @@ export class SearchService implements OnModuleInit {
     const start = performance.now();
 
     this.index = new Index<string>({
-      tokenize: 'strict',
+      tokenize: 'full',
       encoder: Charset.LatinExtra,
-      context: {
-        resolution: 5,
-        depth: 3,
-        bidirectional: true,
-      },
+      // context: {
+      //   resolution: 5,
+      //   depth: 3,
+      //   bidirectional: true,
+      // },
     });
 
     const product_names = await this.prisma.products.findMany({
