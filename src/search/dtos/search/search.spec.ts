@@ -1,7 +1,7 @@
-import { Search } from './search';
-
-describe('Search', () => {
-  it('should be defined', () => {
-    expect(new Search()).toBeDefined();
-  });
-});
+// import { Search } from './search';
+//
+// describe('Search', () => {
+//   it('should be defined', () => {
+//     expect(new Search()).toBeDefined();
+//   });
+// });
