@@ -64,14 +64,7 @@ export class SearchService implements OnModuleInit {
     });
 
     // analytics
-    await this.logs.log(
-      'search',
-      JSON.stringify({
-        query,
-        result_count: results.length,
-      }),
-    );
-
+    await this.logs.searchTelemetry(query, results.length);
     return results;
   }
 
@@ -92,13 +85,7 @@ export class SearchService implements OnModuleInit {
     });
 
     // analytics
-    await this.logs.log(
-      'get-product',
-      JSON.stringify({
-        id,
-        valid: !!result,
-      }),
-    );
+    await this.logs.getProductTelemetry(id, !!result);
 
     if (!result) {
       throw new NotFoundException('Product ID not found');

@@ -126,4 +126,18 @@ model ParseDictionary {
   created_at DateTime @default(now())
 }
 
+model SearchTelemetry {
+  id           String   @id @default(uuid(7))
+  search       String
+  result_count Int
+  created_at   DateTime @default(now())
+}
+
+model GetProductTelemetry {
+  id            String   @id @default(uuid(7))
+  requested     String
+  found_results Boolean
+  created_at    DateTime @default(now())
+}
+
 // todo search analytics table.

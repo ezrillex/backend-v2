@@ -39,4 +39,22 @@ export class LogService {
       data: processed_logs,
     });
   }
+
+  async searchTelemetry(search: string, result_count: number) {
+    await this.prisma.searchTelemetry.create({
+      data: {
+        search,
+        result_count,
+      },
+    });
+  }
+
+  async getProductTelemetry(requested: string, found_results: boolean) {
+    await this.prisma.getProductTelemetry.create({
+      data: {
+        requested,
+        found_results,
+      },
+    });
+  }
 }
