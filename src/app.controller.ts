@@ -14,6 +14,7 @@ import { SearchService } from './search/search.service';
 import { SchedulerService } from './scheduler/scheduler.service';
 import { Search } from './search/dtos/search/search.dto';
 import { GetProduct } from './search/dtos/get-product/get-product';
+import { ImagesService } from './images/images.service';
 
 @Controller()
 export class AppController {
@@ -24,6 +25,7 @@ export class AppController {
     private readonly tasksService: TasksService,
     private readonly searchService: SearchService,
     private readonly schedulerService: SchedulerService,
+    private readonly imagesService: ImagesService,
   ) {}
 
   // @Get('debug')
@@ -67,6 +69,11 @@ export class AppController {
   // async testProductSearch(@Param('id') id: string) {
   //   return this.searchService.getProduct(id);
   // }
+
+  @Get('debug_disk')
+  async debug_webdisk() {
+    return this.tasksService.imageTask();
+  }
 
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('search/:query')

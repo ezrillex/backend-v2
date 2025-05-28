@@ -31,6 +31,21 @@ export class NetworkService {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36',
   };
 
+  chrome_image_headers = {
+    accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+    'accept-language': 'es-US,es-419;q=0.9,es;q=0.8',
+    'cache-control': 'no-cache',
+    pragma: 'no-cache',
+    priority: 'i',
+    'sec-ch-ua':
+      '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+    'sec-fetch-dest': 'image',
+    'sec-fetch-mode': 'no-cors',
+    'sec-fetch-site': 'same-origin',
+  };
+
   async get(url: string) {
     const { status, headers, data, config, statusText, request } =
       await firstValueFrom(
@@ -65,5 +80,16 @@ export class NetworkService {
       status: status,
       data: data,
     };
+  }
+
+  async getImage(url: string) {
+    const response = await firstValueFrom(
+      this.httpService.get(url, {
+        headers: this.chrome_image_headers,
+        responseType: 'arraybuffer',
+      }),
+    );
+
+    return Buffer.from(response.data, 'binary');
   }
 }

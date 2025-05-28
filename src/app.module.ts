@@ -13,6 +13,7 @@ import { ZdService } from './shop_adapters/zd/zd.service';
 import { SchedulerService } from './scheduler/scheduler.service';
 import { HttpModule } from '@nestjs/axios';
 import { SearchService } from './search/search.service';
+import { ImagesService } from './images/images.service';
 
 @Module({
   imports: [ScheduleModule.forRoot(), HttpModule],
@@ -29,6 +30,7 @@ import { SearchService } from './search/search.service';
     ZdService,
     SchedulerService,
     SearchService,
+    ImagesService,
   ],
 })
 export class AppModule {}

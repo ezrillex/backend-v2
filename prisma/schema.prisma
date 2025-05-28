@@ -95,8 +95,9 @@ model Products {
 model Images {
   id          String   @id @default(uuid(7))
   scraped_url String   @unique
-  cdn_url     String? // url to our hosted file.
+  // cdn_url     String? // url to our hosted file.
   created_at  DateTime @default(now())
+  bucket      Int? // folder number, url is cdn.site.xyz/000/image_id.jpg so no need to store it front builds it.
 
   producto    Products @relation(fields: [producto_id], references: [id])
   producto_id String
