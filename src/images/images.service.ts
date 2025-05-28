@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createClient, FileStat, WebDAVClient } from 'webdav';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { NetworkService } from '../core/network/network.service';
+import sharp from 'sharp';
 
 @Injectable()
 export class ImagesService implements OnModuleInit {
@@ -13,12 +14,14 @@ export class ImagesService implements OnModuleInit {
   webdav_client: WebDAVClient;
 
   async onModuleInit() {
+    console.log('logging in to web disk client...');
     this.webdav_client = createClient('[REDACTED]', {
       username: 'cdn_manager@0001329.xyz',
       password: '[REDACTED]',
     });
-
+    console.log('checking buckets exists');
     await this.check_buckets_exist();
+    console.log('done');
   }
 
   async check_buckets_exist() {
@@ -88,13 +91,25 @@ export class ImagesService implements OnModuleInit {
     const image = await this.networkService.getImage(url);
 
     // optimize image
+    const optimized = await sharp(image)
+      // .removeAlpha()
+      .flatten({ background: '#ffffff' })
+      .toFormat('webp', {
+        quality: 70,
+        effort: 6,
+        smartSubsample: true,
+        smartDeblock: true,
+        preset: 'picture',
+        force: true,
+      })
+      .toBuffer();
 
     // upload image
     const bucket = await this.getAvailableBucket();
     const bucketString = bucket.toString().padStart(3, '0');
     const upload = await this.webdav_client.putFileContents(
-      `/${bucketString}/${id}.jpg`,
-      image,
+      `/${bucketString}/${id}.webp`,
+      optimized,
       { overwrite: true },
     );
 
