@@ -40,21 +40,38 @@ export class SearchService implements OnModuleInit {
   }
 
   async search(query: string) {
+    const telemetry_start = performance.now();
     const ids = (await this.index.search({
       query,
     })) as string[];
 
-    // todo select solo los campos mostrados en search results.
     const results = await this.prisma.products.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
         precios: {
+          select: {
+            value: true,
+          },
           orderBy: {
             created_at: 'desc',
           },
           take: 1, // is this limit?
         },
-        tienda: true,
+        tienda: {
+          select: {
+            name: true,
+          },
+        },
+        imagenes: {
+          select: {
+            id: true,
+            bucket: true,
+          },
+          take: 1,
+        },
       },
+
       where: {
         id: {
           in: ids,
@@ -62,12 +79,72 @@ export class SearchService implements OnModuleInit {
       },
     });
 
-    // analytics
-    await this.logs.searchTelemetry(query, results.length);
+    const telemetry_end = performance.now();
+    void this.logs
+      .searchTelemetry(query, results.length, telemetry_end - telemetry_start)
+      .catch((err) => console.error('log failed', err));
+
     return results;
   }
 
+  async getCategory(id: string) {
+    const telemetry_start = performance.now();
+
+    const results = await this.prisma.categories.findUnique({
+      select: {
+        name: true,
+        productos: {
+          // todo reuse this as is same as search query at least this select section.
+          select: {
+            id: true,
+            name: true,
+            precios: {
+              select: {
+                value: true,
+              },
+              orderBy: {
+                created_at: 'desc',
+              },
+              take: 1, // is this limit?
+            },
+            tienda: {
+              select: {
+                name: true,
+              },
+            },
+            imagenes: {
+              select: {
+                id: true,
+                bucket: true,
+              },
+              take: 1,
+            },
+          },
+        },
+      },
+      where: {
+        id: id,
+      },
+    });
+
+    const telemetry_end = performance.now();
+    void this.logs
+      .getCategoryProductsTelemetry(
+        id,
+        results ? results.productos.length : 0,
+        telemetry_end - telemetry_start,
+      )
+      .catch((err) => console.error('log failed', err));
+
+    if (!results) {
+      throw new NotFoundException('Product ID not found');
+    } else {
+      return results;
+    }
+  }
+
   async getProduct(id: string) {
+    const telemetry_start = performance.now();
     const result = await this.prisma.products.findUnique({
       where: { id },
       include: {
@@ -77,14 +154,17 @@ export class SearchService implements OnModuleInit {
           orderBy: {
             created_at: 'desc',
           },
-          take: 1, // is this limit?
         },
         tienda: true,
       },
     });
 
     // analytics
-    await this.logs.getProductTelemetry(id, !!result);
+    const telemetry_end = performance.now();
+    // move error catch to inside the function.
+    void this.logs
+      .getProductTelemetry(id, !!result, telemetry_end - telemetry_start)
+      .catch((err) => console.error('log failed', err));
 
     if (!result) {
       throw new NotFoundException('Product ID not found');

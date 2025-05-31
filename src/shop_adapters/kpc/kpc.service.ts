@@ -123,7 +123,9 @@ export class KpcService
 
     const precio = $('#our_price_display').text().trim();
     console.log(precio);
-    const precioNumerico = parseInt(precio.replace('$', '').replace('.', ''));
+    const precioNumerico = parseInt(
+      precio.replace('$', '').replace('.', '').replace(',', ''),
+    );
     console.log(precioNumerico);
     console.log($('#our_price_display').length);
 

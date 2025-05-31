@@ -26,7 +26,7 @@ export class ImagesService implements OnModuleInit {
 
   async check_buckets_exist() {
     const contents: FileStat[] = (await this.webdav_client.getDirectoryContents(
-      '/',
+      process.env.WEB_DISK_BASE_PATH,
       {
         deep: false,
         details: false,
@@ -35,18 +35,20 @@ export class ImagesService implements OnModuleInit {
 
     // console.log(contents);
 
-    const omit = ['.well-known', 'cgi-bin', 'test.jpg'];
+    const omit = ['.well-known', 'cgi-bin', 'test.jpg', '000dev'];
 
     const buckets = contents.filter((item) => !omit.includes(item.basename));
 
     // make sure folders are init.
-    for (let i = 0; i <= 999; i++) {
+    for (let i = 0; i <= parseInt(process.env.MAX_BUCKETS); i++) {
       const code = i.toString().padStart(3, '0');
 
       const exists = buckets.some((bucket) => bucket.basename === code);
       if (!exists) {
         // code to create the folder.
-        await this.webdav_client.createDirectory(`/${code}`);
+        await this.webdav_client.createDirectory(
+          `${process.env.WEB_DISK_BASE_PATH}${code}`,
+        );
         console.log('Created directory ', code);
       }
     }
@@ -75,10 +77,13 @@ export class ImagesService implements OnModuleInit {
     }
 
     // determine bucket with capacity
-    for (let i = 0; i <= 999; i++) {
+    for (let i = 0; i <= parseInt(process.env.MAX_BUCKETS); i++) {
       const selected_capacity = bucketCapacity.get(i);
-      if (selected_capacity === undefined || selected_capacity < 100) {
-        // check if under bucket max capacity of 100.
+      if (
+        selected_capacity === undefined ||
+        selected_capacity < parseInt(process.env.IMAGES_PER_BUCKET)
+      ) {
+        // check if under bucket max capacity of 100 or env var.
         return i;
       }
     }
@@ -108,7 +113,7 @@ export class ImagesService implements OnModuleInit {
     const bucket = await this.getAvailableBucket();
     const bucketString = bucket.toString().padStart(3, '0');
     const upload = await this.webdav_client.putFileContents(
-      `/${bucketString}/${id}.webp`,
+      `${process.env.WEB_DISK_BASE_PATH}${bucketString}/${id}.webp`,
       optimized,
       { overwrite: true },
     );
@@ -116,7 +121,9 @@ export class ImagesService implements OnModuleInit {
     if (upload) {
       // success
       console.log('succesfully uploaded image:');
-      console.log(`[REDACTED]`);
+      console.log(
+        `[REDACTED]`,
+      );
       // update image record with bucket number.
       await this.prisma.images.update({
         data: {
@@ -128,6 +135,4 @@ export class ImagesService implements OnModuleInit {
       });
     }
   }
-
-  async test() {}
 }

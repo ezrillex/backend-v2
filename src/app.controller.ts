@@ -15,6 +15,7 @@ import { SchedulerService } from './scheduler/scheduler.service';
 import { Search } from './search/dtos/search/search.dto';
 import { GetProduct } from './search/dtos/get-product/get-product';
 import { ImagesService } from './images/images.service';
+import { GetCategory } from './search/dtos/get-category/get-category';
 
 @Controller()
 export class AppController {
@@ -70,10 +71,10 @@ export class AppController {
   //   return this.searchService.getProduct(id);
   // }
 
-  @Get('debug_disk')
-  async debug_webdisk() {
-    return this.tasksService.imageTask();
-  }
+  // @Get('debug_disk')
+  // async debug_webdisk() {
+  //   return this.tasksService.imageTask();
+  // }
 
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('search/:query')
@@ -87,5 +88,21 @@ export class AppController {
   async getProduct(@Param() params: GetProduct) {
     console.log(params.id);
     return this.searchService.getProduct(params.id);
+  }
+
+  @Get('categories')
+  async getCategories() {
+    return this.prisma.categories.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
+  @Get('categories/:id')
+  async getCategory(@Param() params: GetCategory) {
+    console.log(params.id);
+    return this.searchService.getCategory(params.id);
   }
 }

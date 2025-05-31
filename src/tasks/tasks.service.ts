@@ -94,10 +94,9 @@ ORDER BY r.shop_id,
         },
       },
     });
-    console.log(img);
-
-    // process it
-    await this.imagesService.scrapeImage(img.id, img.scraped_url);
+    if (img) {
+      await this.imagesService.scrapeImage(img.id, img.scraped_url);
+    }
   }
 
   async processJob(job: {

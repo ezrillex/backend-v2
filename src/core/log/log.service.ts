@@ -40,20 +40,44 @@ export class LogService {
     });
   }
 
-  async searchTelemetry(search: string, result_count: number) {
+  async searchTelemetry(
+    search: string,
+    result_count: number,
+    time_taken: number,
+  ) {
     await this.prisma.searchTelemetry.create({
       data: {
         search,
         result_count,
+        time_taken,
       },
     });
   }
 
-  async getProductTelemetry(requested: string, found_results: boolean) {
+  async getProductTelemetry(
+    requested: string,
+    found_results: boolean,
+    time_taken: number,
+  ) {
     await this.prisma.getProductTelemetry.create({
       data: {
         requested,
         found_results,
+        time_taken,
+      },
+    });
+  }
+
+  async getCategoryProductsTelemetry(
+    requested: string,
+    result_count: number,
+    time_taken: number,
+  ) {
+    await this.prisma.getCategoryProductsTelemetry.create({
+      data: {
+        requested,
+        result_count,
+        time_taken,
       },
     });
   }

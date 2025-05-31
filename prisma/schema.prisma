@@ -90,6 +90,8 @@ model Products {
 
   tienda    Shops  @relation(fields: [tienda_id], references: [id])
   tienda_id String
+
+  @@index([categoria_id])
 }
 
 model Images {
@@ -101,6 +103,8 @@ model Images {
 
   producto    Products @relation(fields: [producto_id], references: [id])
   producto_id String
+
+  @@index([producto_id])
 }
 
 model Prices {
@@ -108,8 +112,10 @@ model Prices {
   value      Int
   created_at DateTime @default(now())
 
-  producto    Products @relation(fields: [producto_id], references: [id])
+  producto    Products @relation(fields: [producto_id], references: [id], onDelete: Cascade)
   producto_id String
+
+  @@index([producto_id, created_at(sort: Desc)])
 }
 
 model Logs {
@@ -131,6 +137,7 @@ model SearchTelemetry {
   id           String   @id @default(uuid(7))
   search       String
   result_count Int
+  time_taken   Float?
   created_at   DateTime @default(now())
 }
 
@@ -138,7 +145,16 @@ model GetProductTelemetry {
   id            String   @id @default(uuid(7))
   requested     String
   found_results Boolean
+  time_taken    Float?
   created_at    DateTime @default(now())
+}
+
+model GetCategoryProductsTelemetry {
+  id           String   @id @default(uuid(7))
+  requested    String
+  result_count Int
+  time_taken   Float?
+  created_at   DateTime @default(now())
 }
 
 // todo search analytics table.
