@@ -16,6 +16,8 @@ import { Search } from './search/dtos/search/search.dto';
 import { GetProduct } from './search/dtos/get-product/get-product';
 import { ImagesService } from './images/images.service';
 import { GetCategory } from './search/dtos/get-category/get-category';
+import { ZdService } from './shop_adapters/zd/zd.service';
+import { UtilsService } from './core/utils/utils.service';
 
 @Controller()
 export class AppController {
@@ -27,6 +29,8 @@ export class AppController {
     private readonly searchService: SearchService,
     private readonly schedulerService: SchedulerService,
     private readonly imagesService: ImagesService,
+    private readonly zd: ZdService,
+    private readonly utils: UtilsService,
   ) {}
 
   // @Get('debug')
@@ -75,6 +79,40 @@ export class AppController {
   // async debug_webdisk() {
   //   return this.tasksService.imageTask();
   // }
+
+  // @Get('debug123')
+  // async debug123() {
+  //   return this.tasksService.scheduleDailyTasks();
+  // }
+
+  @Get('fix_wrong_hashes')
+  async fixHashes() {
+    const prods = await this.prisma.products.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      where: {
+        tienda: {
+          adapter: 'KPC',
+        },
+      },
+    });
+
+    for (const prod of prods) {
+      const new_fingerprint = this.utils.hash(prod.name + 'kpc');
+      await this.prisma.products.update({
+        data: {
+          fingerprint: new_fingerprint,
+        },
+        where: {
+          id: prod.id,
+        },
+      });
+    }
+
+    return 'finished sucessfully';
+  }
 
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('search/:query')
