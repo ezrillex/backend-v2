@@ -59,6 +59,17 @@ export class NetworkService {
     //console.log(status);
     //console.log(headers);
 
+    let string_data: string;
+    if (typeof data === 'object') {
+      string_data = JSON.stringify(data);
+    } else if (typeof data === 'string') {
+      string_data = data;
+    } else {
+      throw new Error(
+        'Error: data obtained is not string or object. Unhandled case. Unable to log to db',
+      );
+    }
+
     await this.logs.logMany([
       {
         type: 'network',
@@ -71,7 +82,7 @@ export class NetworkService {
       },
       {
         type: 'network-data',
-        data: data,
+        data: string_data,
         compress: true,
       },
     ]);
@@ -91,5 +102,42 @@ export class NetworkService {
     );
 
     return Buffer.from(response.data, 'binary');
+  }
+
+  async post(url: string, request_data: object) {
+    const { status, headers, data, config, statusText, request } =
+      await firstValueFrom(
+        this.httpService.post(url, request_data, {
+          timeout: 30000,
+          headers: this.chrome_headers,
+          decompress: true,
+        }),
+      );
+
+    //console.log(status);
+    //console.log(headers);
+
+    await this.logs.logMany([
+      {
+        type: 'network-post',
+        data: JSON.stringify({
+          status,
+          headers,
+          config,
+          statusText,
+          request_data,
+        }),
+      },
+      {
+        type: 'network-data-post',
+        data: JSON.stringify(data),
+        // compress: true, // because is an object it crashes the compress logic.
+      },
+    ]);
+
+    return {
+      status: status,
+      data: data,
+    };
   }
 }
