@@ -35,7 +35,7 @@ export class ImagesService implements OnModuleInit {
 
     // console.log(contents);
 
-    const omit = ['.well-known', 'cgi-bin', 'test.jpg', '000dev'];
+    const omit = ['.well-known', 'cgi-bin', 'test.jpg', '000dev', '000docs'];
 
     const buckets = contents.filter((item) => !omit.includes(item.basename));
 

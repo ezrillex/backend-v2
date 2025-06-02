@@ -130,6 +130,7 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
     } else {
       price = product.precio_general;
     }
+    price = price * 100; // agregar centavos / uniformidad entre adapters.
 
     const name = product.title;
 
@@ -153,7 +154,7 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
       try {
         const $ = cheerio.load(product.description);
         const cleanDescription = $.text();
-        console.log(cleanDescription);
+        // console.log(cleanDescription);
         details += cleanDescription;
       } catch (e) {
         console.log('parsing description failed, using only summary');
