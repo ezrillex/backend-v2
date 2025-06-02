@@ -9,7 +9,7 @@ export const options = {
       startRate: 10,
       timeUnit: '1s',
       preAllocatedVUs: 50,
-      maxVUs: 500,
+      maxVUs: 500, // todo increase this for better testing. however do try using this one first as comparison.
       stages: [
         { target: 50, duration: '30s' }, // 50 RPS
         { target: 100, duration: '30s' }, // 100 RPS
