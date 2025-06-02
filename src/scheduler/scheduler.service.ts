@@ -11,26 +11,26 @@ export class SchedulerService {
   ) {}
 
   // helps page jobs to schedule each product scrape and next page scheduling
-  async createJob(priority: Priority, root_id: string, job_data: object) {
+  async createJob(priority: Priority, source_id: string, job_data: object) {
     await this.prisma.jobQueue.create({
       data: {
         job_data,
         priority,
-        root_url: {
+        source: {
           connect: {
-            id: root_id,
+            id: source_id,
           },
         },
       },
     });
     await this.logs.log(
       'create-jobs-single',
-      `Created Job: ${priority}, root: ${root_id}, data: ${JSON.stringify(job_data)}`,
+      `Created Job: ${priority}, root: ${source_id}, data: ${JSON.stringify(job_data)}`,
     );
   }
 
   async createManyJobs(
-    jobs: { job_data: object; root_url_id: string; priority: Priority }[],
+    jobs: { job_data: object; source_id: string; priority: Priority }[],
   ) {
     await this.prisma.jobQueue.createMany({
       data: jobs,

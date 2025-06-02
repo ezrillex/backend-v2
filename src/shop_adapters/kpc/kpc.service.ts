@@ -7,14 +7,13 @@ import { UtilsService } from '../../core/utils/utils.service';
 import { ProductsService } from '../../products/products.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
 
+export type KPC_JobDataType = {
+  url: string;
+  page?: number;
+};
+
 @Injectable()
-export class KpcService
-  implements
-    IshopAdapter<{
-      url: string;
-      page?: number;
-    }>
-{
+export class KpcService implements IshopAdapter<KPC_JobDataType> {
   constructor(
     private readonly networkService: NetworkService,
     private readonly utils: UtilsService,
@@ -23,18 +22,15 @@ export class KpcService
   ) {}
 
   async scrape(
-    job_data: {
-      url: string;
-      page?: number;
-    },
+    job_data: KPC_JobDataType,
     category_id: string,
     tienda_id: string,
-    root_url_id: string,
+    source_id: string,
     priority: Priority,
   ): Promise<string> {
     let outcome: string;
     if (priority === Priority.PAGE || priority === Priority.NEXT_PAGE) {
-      outcome = await this.handlePage(job_data.url, root_url_id, job_data.page);
+      outcome = await this.handlePage(job_data.url, source_id, job_data.page);
     } else if (priority === Priority.PRODUCT) {
       outcome = await this.handleProduct(job_data.url, category_id, tienda_id);
     } else {
@@ -45,41 +41,29 @@ export class KpcService
     // update the job w/ outcome.
     return outcome;
   }
-  async handlePage(url: string, root_url_id: string, page?: number) {
+  async handlePage(url: string, source_id: string, page?: number) {
     const { status, data } = await this.networkService.get(url);
 
     // todo validacion de pagina no vacia
-
-    //console.log(status, data);
     const $ = cheerio.load(data);
     const articles = $('article').toArray();
     const product_urls: string[] = [];
     for (const article of articles) {
-      //const product_name = $(article).find('h2').text().trim();
-      // const product_image = $(article)
-      //   .find('img')
-      //   .attr('data-full-size-image-url');
       const product_url = $(article).find('h2 a').attr('href');
-      console.log(product_url);
-      // todo validacion que sea un url valido.
+      // todo validacion que sea un url valido?
       product_urls.push(product_url);
     }
-    console.log('url de productos');
-    console.log(product_urls);
-    console.log('sin duplicados?');
     const unique_product_urls: string[] = [...new Set(product_urls)];
-    console.log(unique_product_urls);
     await this.schedulerService.createManyJobs(
       unique_product_urls.map((data) => ({
         job_data: { url: data },
-        root_url_id: root_url_id,
+        source_id: source_id,
         priority: 'PRODUCT',
       })),
     );
 
     // todo validacion de paginacion parse
     const paginacion = $('nav.pagination .col-md-4').text().trim();
-    console.log(paginacion);
 
     // Usa una expresión regular para extraer los números
     const match = paginacion.match(/Mostrando (\d+)-(\d+) de (\d+)/);
@@ -88,12 +72,11 @@ export class KpcService
     const hasta = parseInt(match[2], 10);
     const total = parseInt(match[3], 10);
 
-    console.log({ desde, hasta, total });
-
+    // in the zd i have a field for this instead of building the url now, idk which might be best tbh for now leave it like so.
     if (total > hasta) {
       // more pages. schedule new job with next page.
-      let new_job_url;
-      let new_page;
+      let new_job_url: string;
+      let new_page: number;
       if (page) {
         // schedule + 1 page number
         new_page = page + 1;
@@ -103,7 +86,7 @@ export class KpcService
         new_page = 2;
       }
 
-      await this.schedulerService.createJob('NEXT_PAGE', root_url_id, {
+      await this.schedulerService.createJob('NEXT_PAGE', source_id, {
         url: new_job_url,
         page: new_page,
       });
@@ -115,19 +98,14 @@ export class KpcService
   async handleProduct(url: string, category_id: string, tienda_id: string) {
     const { status, data } = await this.networkService.get(url);
 
-    //console.log(status, data);
     const $ = cheerio.load(data);
 
     const nombre = $('h1[itemprop="name"]').text().trim();
-    console.log(nombre);
 
     const precio = $('#our_price_display').text().trim();
-    console.log(precio);
     const precioNumerico = parseInt(
       precio.replace('$', '').replace('.', '').replace(',', ''),
     );
-    console.log(precioNumerico);
-    console.log($('#our_price_display').length);
 
     const img_elements = $('img.thumb.js-thumb').toArray();
     const imagenes: string[] = [];
@@ -135,34 +113,23 @@ export class KpcService
     for (const imagen of img_elements) {
       imagenes.push($(imagen).attr('data-image-large-src'));
     }
-    console.log(imagenes);
-    // todo solo guardar las url de las imagenes, dejar para la siguente iteracion mostrarlas
 
     const descripcion = $('div.product-description').text().trim();
-    console.log(descripcion);
 
     // intentar obtener la marca de la informacion en la pagina.
     let marca = $('img.manufacturer-logo').attr('src');
     // todo integrar con servicio de mapeo / diccionario para traducir el link a un string de marca conocido.
     // todo fallback si no hay entonces consultar con IA.
-    console.log('marca: ', marca);
     if (!marca) {
       marca = 'FAILED-TO-GET-BRAND';
     }
-    console.log('marca: ', marca);
-
-    console.log('url del producto');
-    console.log(url);
-
     // todo job has to include meta information: categoria
     // for now I linked the job to the root url which has this information as to avoid having stale info on here.
 
     // debe ser aqui esto? o en el save job data?
-    const fingerprint_data = nombre + 'kpc' + 'liquid_cooling';
+    const fingerprint_data = nombre + 'kpc';
 
-    console.log('hash:');
     const hash = this.utils.hash(fingerprint_data);
-    console.log(hash);
     // todo adapter has to validate data was parsed or if not really set as null or fallback to other options
     await this.productsService.save_scraped_product_information(
       hash,

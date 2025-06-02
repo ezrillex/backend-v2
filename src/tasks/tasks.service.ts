@@ -3,16 +3,18 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../core/prisma/prisma.service';
 import { JobStatus, Priority } from '@prisma/client';
 import { LogService } from '../core/log/log.service';
-import { KpcService } from '../shop_adapters/kpc/kpc.service';
+import { KPC_JobDataType, KpcService } from '../shop_adapters/kpc/kpc.service';
 import { JsonValue } from '@prisma/client/runtime/library';
 import { SchedulerService } from 'src/scheduler/scheduler.service';
 import { ImagesService } from '../images/images.service';
+import { ZD_JobDataType, ZdService } from '../shop_adapters/zd/zd.service';
 
 @Injectable()
 export class TasksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly kpcService: KpcService,
+    private readonly zdService: ZdService,
     private readonly schedulerService: SchedulerService,
     private readonly logs: LogService,
     private readonly imagesService: ImagesService,
@@ -34,11 +36,11 @@ export class TasksService {
   async scrapeTask() {
     // get next jobs from database, lock job
     const job_ids: { id: string }[] = await this.prisma
-      .$queryRaw`SELECT DISTINCT ON (r.shop_id) jq.id
+      .$queryRaw`SELECT DISTINCT ON (s.shop_id) jq.id
 FROM "JobQueue" jq
-JOIN "RootUrls" r ON jq.root_url_id = r.id
+JOIN "Sources" s ON jq.source_id = s.id
 WHERE jq.status = 'PENDING'
-ORDER BY r.shop_id, 
+ORDER BY s.shop_id, 
          CASE jq.priority 
             WHEN 'NEXT_PAGE' THEN 0 
             WHEN 'PAGE' THEN 1 
@@ -53,11 +55,16 @@ ORDER BY r.shop_id,
         id: true,
         job_data: true,
         priority: true,
-        root_url_id: true,
-        root_url: {
+        source_id: true,
+        source: {
           select: {
             shop_id: true,
             category_id: true,
+            shop: {
+              select: {
+                adapter: true,
+              },
+            },
           },
         },
       },
@@ -68,19 +75,14 @@ ORDER BY r.shop_id,
       },
     });
 
-    // console.log(jobs);
     // for with switch to call shop adapters as promises
     const runningJobs: Promise<void>[] = [];
     for (const job of jobs) {
       // console.log(job);
       runningJobs.push(this.processJob(job));
     }
-    // should the shop adapter log stuff by itself? job state management?
-    // { outcome: 'success' }
     // wait for adapters to finish, make sure that adapters have a timeout.
     await Promise.all(runningJobs);
-    // so in theory we could have concurrent shop request as long as there is not a locked job for x shop. We could go for a simple cooldown 60 seconds, have the thing run 15 seconds maybe?
-    // why not parallel tho? like just get all possible shop ones and fire them at once. No checking for if x passed and having this run at once. This could also be an indicator of if a job is stuck, like 60 seconds is too long. However there is an issue, if thing is running it will block from running new one. Yeah so it does have to be parallel.
   }
 
   @Cron('30 * * * * *')
@@ -103,24 +105,37 @@ ORDER BY r.shop_id,
     id: string;
     job_data: JsonValue;
     priority: Priority;
-    root_url_id: string;
-    root_url: {
+    source_id: string;
+    source: {
       category_id: string;
       shop_id: string;
+      shop: {
+        adapter: string;
+      };
     };
   }) {
-    // todo switch case
     try {
-      const result = await this.kpcService.scrape(
-        job.job_data as {
-          url: string;
-          page?: number;
-        },
-        job.root_url.category_id,
-        job.root_url.shop_id,
-        job.root_url_id,
-        job.priority,
-      );
+      let result: string;
+      switch (job.source.shop.adapter) {
+        case 'KPC':
+          result = await this.kpcService.scrape(
+            job.job_data as KPC_JobDataType,
+            job.source.category_id,
+            job.source.shop_id,
+            job.source_id,
+            job.priority,
+          );
+          break;
+        case 'ZD':
+          result = await this.zdService.scrape(
+            job.job_data as ZD_JobDataType,
+            job.source.category_id,
+            job.source.shop_id,
+            job.source_id,
+            job.priority,
+          );
+      }
+
       // unlock jobs update statuses
       await this.finishJob(result, job.id);
     } catch (error) {
@@ -133,6 +148,7 @@ ORDER BY r.shop_id,
           error: error,
         }),
       );
+      console.log('Logged error: ', error);
     }
   }
 
@@ -156,15 +172,15 @@ ORDER BY r.shop_id,
     console.log('daily work schedule start ');
     const start = performance.now();
     // todo mechanism to check if this job didnt run and try to run it. maybe on startup or hourly / half hourly.
-    // for each root url schedule a job
-    const rootJobs = await this.prisma.rootUrls.findMany({
-      select: { id: true, url: true },
+    // for each source schedule a job
+    const sources = await this.prisma.sources.findMany({
+      select: { id: true, data: true },
     });
 
     await this.schedulerService.createManyJobs(
-      rootJobs.map((data) => ({
-        job_data: { url: data.url },
-        root_url_id: data.id,
+      sources.map((data) => ({
+        job_data: data.data as object,
+        source_id: data.id,
         priority: Priority.PAGE,
       })),
     );

@@ -17,15 +17,15 @@ model Shops {
   id         String       @id @default(uuid(7))
   name       String
   adapter    ShopAdapters
-  RootUrls   RootUrls[]
+  Sources    Sources[]
   productos  Products[]
   enabled    Boolean      @default(true)
   created_at DateTime     @default(now())
 }
 
-model RootUrls {
+model Sources {
   id          String     @id @default(uuid(7))
-  url         String
+  data        Json
   // a que categoria pertenece el url? Instead of having mappings of x->y categories. Adjust it here.
   category_id String
   categories  Categories @relation(fields: [category_id], references: [id])
@@ -55,8 +55,8 @@ model JobQueue {
   status   JobStatus @default(PENDING)
   priority Priority
 
-  root_url_id String
-  root_url    RootUrls @relation(fields: [root_url_id], references: [id])
+  source_id String
+  source    Sources @relation(fields: [source_id], references: [id])
 
   created_at   DateTime  @default(now())
   processed_at DateTime?
@@ -66,7 +66,7 @@ model Categories {
   id   String @id @default(uuid(7))
   name String
 
-  urls      RootUrls[]
+  Sources   Sources[]
   productos Products[]
 }
 
