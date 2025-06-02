@@ -46,6 +46,12 @@ export class ProductsService {
               value: precio,
             },
           },
+          imagenes: {
+            createMany: {
+              data: img_urls_objects,
+              skipDuplicates: true,
+            },
+          },
         },
         where: {
           id: exists.id,
