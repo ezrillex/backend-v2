@@ -7,4 +7,5 @@ async function bootstrap() {
   app.enableCors(); // todo for testing purposes i enabled this.
   await app.listen(process.env.PORT ?? 3000);
 }
+// noinspection JSIgnoredPromiseFromCall
 bootstrap();
