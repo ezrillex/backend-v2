@@ -9,7 +9,7 @@ ALTER TABLE "RootUrls" DROP CONSTRAINT "RootUrls_category_id_fkey";
 ALTER TABLE "RootUrls" DROP CONSTRAINT "RootUrls_shop_id_fkey";
 
 -- Renombrar columna root url a sources en job queue.
-ALTER TABLE "JobQueue" RENAME COLUMN "source_id" TO "source_id";
+ALTER TABLE "JobQueue" RENAME COLUMN "root_url_id" TO "source_id";
 
 -- Renombrar la tabla
 ALTER TABLE "RootUrls" RENAME TO "Sources";

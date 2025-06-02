@@ -85,34 +85,34 @@ export class AppController {
   //   return this.tasksService.scheduleDailyTasks();
   // }
 
-  @Get('fix_wrong_hashes')
-  async fixHashes() {
-    const prods = await this.prisma.products.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      where: {
-        tienda: {
-          adapter: 'KPC',
-        },
-      },
-    });
-
-    for (const prod of prods) {
-      const new_fingerprint = this.utils.hash(prod.name + 'kpc');
-      await this.prisma.products.update({
-        data: {
-          fingerprint: new_fingerprint,
-        },
-        where: {
-          id: prod.id,
-        },
-      });
-    }
-
-    return 'finished sucessfully';
-  }
+  // @Get('fix_wrong_hashes')
+  // async fixHashes() {
+  //   const prods = await this.prisma.products.findMany({
+  //     select: {
+  //       id: true,
+  //       name: true,
+  //     },
+  //     where: {
+  //       tienda: {
+  //         adapter: 'KPC',
+  //       },
+  //     },
+  //   });
+  //
+  //   for (const prod of prods) {
+  //     const new_fingerprint = this.utils.hash(prod.name + 'kpc');
+  //     await this.prisma.products.update({
+  //       data: {
+  //         fingerprint: new_fingerprint,
+  //       },
+  //       where: {
+  //         id: prod.id,
+  //       },
+  //     });
+  //   }
+  //
+  //   return 'finished sucessfully';
+  // }
 
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('search/:query')
