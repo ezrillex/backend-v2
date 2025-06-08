@@ -1,7 +1,15 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../core/prisma/prisma.service';
-import { Charset, Index } from 'flexsearch';
+import { Charset, Index, Document, DocumentData } from 'flexsearch';
 import { LogService } from '../core/log/log.service';
+import * as fuzzysort from 'fuzzysort';
+
+type Product = {
+  id: string;
+  name: string;
+  product_keywords: string;
+  category_keywords: string;
+};
 
 @Injectable()
 export class SearchService implements OnModuleInit {
@@ -19,22 +27,26 @@ export class SearchService implements OnModuleInit {
     this.index = new Index<string>({
       tokenize: 'full',
       encoder: Charset.LatinExtra,
-      // context: {
-      //   resolution: 5,
-      //   depth: 3,
-      //   bidirectional: true,
-      // },
     });
 
     const product_names = await this.prisma.products.findMany({
       select: {
         id: true,
         name: true,
+        keywords: true,
+        categoria: {
+          select: {
+            keywords: true,
+          },
+        },
       },
     });
 
     for (const product of product_names) {
-      await this.index.add(product.id, product.name);
+      await this.index.add(
+        product.id,
+        `${product.name} ${product.keywords} ${product.categoria.keywords}`,
+      );
     }
     console.log(`indexing finished at ${performance.now() - start}ms`);
   }
@@ -43,48 +55,87 @@ export class SearchService implements OnModuleInit {
     const telemetry_start = performance.now();
     const ids = (await this.index.search({
       query,
+      limit: 1000,
     })) as string[];
 
-    const results = await this.prisma.products.findMany({
-      select: {
-        id: true,
-        name: true,
-        precios: {
-          select: {
-            value: true,
+    const results = (
+      await this.prisma.products.findMany({
+        select: {
+          id: true,
+          name: true,
+          keywords: true,
+          categoria: {
+            select: {
+              keywords: true,
+            },
           },
-          orderBy: {
-            created_at: 'desc',
+          precios: {
+            select: {
+              value: true,
+            },
+            orderBy: {
+              created_at: 'desc',
+            },
+            take: 1, // is this limit?
           },
-          take: 1, // is this limit?
+          tienda: {
+            select: {
+              name: true,
+            },
+          },
+          imagenes: {
+            select: {
+              id: true,
+              bucket: true,
+            },
+            take: 1,
+          },
         },
-        tienda: {
-          select: {
-            name: true,
-          },
-        },
-        imagenes: {
-          select: {
-            id: true,
-            bucket: true,
-          },
-          take: 1,
-        },
-      },
 
-      where: {
-        id: {
-          in: ids,
+        where: {
+          id: {
+            in: ids,
+          },
         },
-      },
+      })
+    ).map((result) => {
+      const categoria_keywords = result.categoria.keywords;
+      delete result.categoria;
+      return {
+        ...result,
+        categoria_keywords,
+      };
     });
+
+    const keys = ['name', 'keywords', 'categoria_keywords'];
+    const boosts = [1, 4, 4]; // more than 1 is worse match score. lower increases match score.
+    // 4 = 25% of weight.
+
+    const sorted_results = fuzzysort
+      .go(query, results, {
+        keys: keys,
+        scoreFn: (keysResult) => {
+          let score = 0;
+          for (let i = 0; i < keysResult.length; i++) {
+            score += keysResult[i].score * boosts[i];
+          }
+          return score;
+        },
+      })
+      .map((result) => this.removeKeywords(result.obj));
 
     const telemetry_end = performance.now();
     void this.logs
       .searchTelemetry(query, results.length, telemetry_end - telemetry_start)
       .catch((err) => console.error('log failed', err));
+    return sorted_results;
+  }
 
-    return results;
+  removeKeywords(obj: any) {
+    delete obj.keywords;
+    delete obj.categoria;
+    delete obj.categoria_keywords;
+    return obj;
   }
 
   async getCategory(id: string) {

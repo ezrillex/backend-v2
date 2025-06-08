@@ -81,4 +81,13 @@ export class LogService {
       },
     });
   }
+
+  async taskTelemetry(task: string, time_taken: number) {
+    await this.prisma.taskTelemetry.create({
+      data: {
+        task,
+        time_taken,
+      },
+    });
+  }
 }

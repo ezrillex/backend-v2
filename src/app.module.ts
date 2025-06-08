@@ -14,6 +14,8 @@ import { SchedulerService } from './scheduler/scheduler.service';
 import { HttpModule } from '@nestjs/axios';
 import { SearchService } from './search/search.service';
 import { ImagesService } from './images/images.service';
+import { AiService } from './ai/ai.service';
+import { DictionaryService } from './dictionary/dictionary.service';
 
 @Module({
   imports: [ScheduleModule.forRoot(), HttpModule],
@@ -31,6 +33,8 @@ import { ImagesService } from './images/images.service';
     SchedulerService,
     SearchService,
     ImagesService,
+    AiService,
+    DictionaryService,
   ],
 })
 export class AppModule {}

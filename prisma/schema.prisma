@@ -63,9 +63,9 @@ model JobQueue {
 }
 
 model Categories {
-  id   String @id @default(uuid(7))
-  name String
-
+  id        String     @id @default(uuid(7))
+  name      String
+  keywords  String?
   Sources   Sources[]
   productos Products[]
 }
@@ -78,6 +78,7 @@ model Products {
   details     String
   marca       String? // extract using AI mvp can skip this.
   modelo      String? // extract using AI mvp can skip this.
+  keywords    String? // ai generated used for improving ranking of fuzzysort.
 
   precios  Prices[]
   imagenes Images[]
@@ -92,6 +93,7 @@ model Products {
   tienda_id String
 
   @@index([categoria_id])
+  @@index([tienda_id])
 }
 
 model Images {
@@ -125,11 +127,11 @@ model Logs {
   created_at DateTime @default(now())
 }
 
-model ParseDictionary {
-  id     String @id @default(uuid(7))
-  input  String
-  output String
-
+model Dictionary {
+  id         String   @id @default(uuid(7))
+  input      String   @unique
+  output     String?
+  // todo leave this optional if new input is found then we return a generic mapping then after we need to go and define the map and have a way to update the ones with the generic ones. like 'MAP_PENDING' or just manually on dbeaver. or an admin endpoint to update this.
   created_at DateTime @default(now())
 }
 
@@ -137,7 +139,7 @@ model SearchTelemetry {
   id           String   @id @default(uuid(7))
   search       String
   result_count Int
-  time_taken   Float?
+  time_taken   Float    @default(-1)
   created_at   DateTime @default(now())
 }
 
@@ -145,7 +147,7 @@ model GetProductTelemetry {
   id            String   @id @default(uuid(7))
   requested     String
   found_results Boolean
-  time_taken    Float?
+  time_taken    Float    @default(-1)
   created_at    DateTime @default(now())
 }
 
@@ -153,8 +155,13 @@ model GetCategoryProductsTelemetry {
   id           String   @id @default(uuid(7))
   requested    String
   result_count Int
-  time_taken   Float?
+  time_taken   Float    @default(-1)
   created_at   DateTime @default(now())
 }
 
-// todo search analytics table.
+model TaskTelemetry {
+  id         String   @id @default(uuid(7))
+  task       String
+  time_taken Float    @default(-1)
+  created_at DateTime @default(now())
+}

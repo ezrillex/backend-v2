@@ -8,6 +8,7 @@ import { JsonValue } from '@prisma/client/runtime/library';
 import { SchedulerService } from 'src/scheduler/scheduler.service';
 import { ImagesService } from '../images/images.service';
 import { ZD_JobDataType, ZdService } from '../shop_adapters/zd/zd.service';
+import { AiService } from 'src/ai/ai.service';
 
 @Injectable()
 export class TasksService {
@@ -18,22 +19,23 @@ export class TasksService {
     private readonly schedulerService: SchedulerService,
     private readonly logs: LogService,
     private readonly imagesService: ImagesService,
+    private readonly aiService: AiService,
   ) {}
 
-  @Cron('* * * * *')
-  async systemCron(): Promise<void> {
+  logSystemStatus(msg: string) {
     const usage = process.memoryUsage();
     const usedMB = (usage.heapUsed / 1024 / 1024).toFixed(2);
     const totalMB = (usage.heapTotal / 1024 / 1024).toFixed(2);
     const memoryUsage = ((usage.heapUsed / usage.heapTotal) * 100).toFixed(2);
-    // eslint-disable-next-line
     console.log(
-      `Current Time: ${new Date().toLocaleString()}, memory used: ${usedMB} MB, total: ${totalMB} MB, ${memoryUsage}%, random number: ${Math.random()}`,
+      `Current Time: ${new Date().toLocaleString()} |\t${msg}\t| memory used: ${usedMB} MB, reserved: ${totalMB} MB, ${memoryUsage}%`,
     );
   }
 
   @Cron('* * * * *')
   async scrapeTask() {
+    this.logSystemStatus('Scrape Task');
+    const telemetry = performance.now();
     // get next jobs from database, lock job
     const job_ids: { id: string }[] = await this.prisma
       .$queryRaw`SELECT DISTINCT ON (s.shop_id) jq.id
@@ -83,11 +85,16 @@ ORDER BY s.shop_id,
     }
     // wait for adapters to finish, make sure that adapters have a timeout.
     await Promise.all(runningJobs);
+
+    void this.logs
+      .taskTelemetry('scrape-task', performance.now() - telemetry)
+      .catch((err) => console.log('Failed to log telemetry'));
   }
 
   @Cron('30 * * * * *')
   async imageTask() {
-    console.log(new Date().toLocaleString());
+    this.logSystemStatus('Image Task');
+    const telemetry = performance.now();
 
     const img = await this.prisma.images.findFirst({
       where: {
@@ -98,7 +105,55 @@ ORDER BY s.shop_id,
     });
     if (img) {
       await this.imagesService.scrapeImage(img.id, img.scraped_url);
+      void this.logs
+        .taskTelemetry('image-task', performance.now() - telemetry)
+        .catch((err) => console.log('Failed to log telemetry'));
+    } else {
+      void this.logs
+        .taskTelemetry('image-task-skipped', performance.now() - telemetry)
+        .catch((err) => console.log('Failed to log telemetry'));
     }
+  }
+
+  @Cron('45 * * * * *')
+  async keywordsTask() {
+    this.logSystemStatus('Keywords Task');
+    const telemetry = performance.now();
+    // todo errors is > 5 stop task and notify
+    try {
+      await this.aiService.inferKeywords(); // this does the check inside the scrape function. Should we replicate this on other services?
+    } catch (err) {
+      await this.logs.log(
+        'error-keywords-task',
+        JSON.stringify({
+          error: err.message,
+          stack: err.stack,
+        }),
+      );
+    }
+    void this.logs
+      .taskTelemetry('keyword-inference-task', performance.now() - telemetry)
+      .catch((err) => console.log('Failed to log telemetry'));
+  }
+
+  @Cron('15 * * * * *')
+  async brandTask() {
+    this.logSystemStatus('Brand Task');
+    const telemetry = performance.now();
+    try {
+      await this.aiService.inferBrand();
+    } catch (err) {
+      await this.logs.log(
+        'error-brand-task',
+        JSON.stringify({
+          error: err.message,
+          stack: err.stack,
+        }),
+      );
+    }
+    void this.logs
+      .taskTelemetry('brand-inference-task', performance.now() - telemetry)
+      .catch((err) => console.log('Failed to log telemetry'));
   }
 
   async processJob(job: {
@@ -169,12 +224,17 @@ ORDER BY s.shop_id,
   // job that schedules next batch of jobs
   @Cron('0 3 * * *')
   async scheduleDailyTasks() {
-    console.log('daily work schedule start ');
-    const start = performance.now();
+    this.logSystemStatus('Daily Schedule Task');
+    const telemetry = performance.now();
     // todo mechanism to check if this job didnt run and try to run it. maybe on startup or hourly / half hourly.
     // for each source schedule a job
     const sources = await this.prisma.sources.findMany({
       select: { id: true, data: true },
+      where: {
+        shop: {
+          enabled: true,
+        },
+      },
     });
 
     await this.schedulerService.createManyJobs(
@@ -185,6 +245,8 @@ ORDER BY s.shop_id,
       })),
     );
 
-    console.log(`finished daily schedule in: ${performance.now() - start}ms`);
+    void this.logs
+      .taskTelemetry('daily-schedule-task', performance.now() - telemetry)
+      .catch((err) => console.log('Failed to log telemetry'));
   }
 }

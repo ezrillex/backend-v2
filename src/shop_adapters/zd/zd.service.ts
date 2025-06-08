@@ -136,7 +136,10 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
 
     const url = '[REDACTED]' + product.slug;
 
-    const brand = product.marca.name;
+    let brand = product.marca?.name ?? '';
+    if (brand) {
+      brand = brand.trim();
+    }
 
     // No hay modelo skiped.
 
@@ -161,7 +164,9 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
       }
     }
 
-    // debe ser aqui esto? o en el save job data?
+    details = details.trim();
+
+    // todo move to save prod info
     const fingerprint_data = name + 'zonadigital';
 
     const hash = this.utils.hash(fingerprint_data);

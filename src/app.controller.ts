@@ -58,9 +58,13 @@ export class AppController {
   //   );
   // }
 
-  // @Get('debug_scheduler')
+  // @Get('debug_kpc')
   // async testDebugScheduler() {
-  //   await this.tasksService.scheduleDailyTasks();
+  //   await this.kpc.handleProduct(
+  //     '[REDACTED]',
+  //     'ignoreme',
+  //     'ignoreme',
+  //   );
   // }
   //
   // @Get('debug_search')
@@ -117,19 +121,18 @@ export class AppController {
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('search/:query')
   async search(@Param() params: Search) {
-    console.log(params.query);
     return this.searchService.search(params.query);
   }
 
   @UsePipes(new ValidationPipe({ transform: true }))
   @Get('product/:id')
   async getProduct(@Param() params: GetProduct) {
-    console.log(params.id);
     return this.searchService.getProduct(params.id);
   }
 
   @Get('categories')
   async getCategories() {
+    // todo cache this?
     return this.prisma.categories.findMany({
       select: {
         id: true,
@@ -140,7 +143,6 @@ export class AppController {
 
   @Get('categories/:id')
   async getCategory(@Param() params: GetCategory) {
-    console.log(params.id);
     return this.searchService.getCategory(params.id);
   }
 }

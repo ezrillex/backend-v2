@@ -6,6 +6,7 @@ import { Priority } from '@prisma/client';
 import { UtilsService } from '../../core/utils/utils.service';
 import { ProductsService } from '../../products/products.service';
 import { SchedulerService } from '../../scheduler/scheduler.service';
+import { DictionaryService } from '../../dictionary/dictionary.service';
 
 export type KPC_JobDataType = {
   url: string;
@@ -19,6 +20,7 @@ export class KpcService implements IshopAdapter<KPC_JobDataType> {
     private readonly utils: UtilsService,
     private readonly productsService: ProductsService,
     private readonly schedulerService: SchedulerService,
+    private readonly dictionaryService: DictionaryService,
   ) {}
 
   async scrape(
@@ -114,19 +116,18 @@ export class KpcService implements IshopAdapter<KPC_JobDataType> {
       imagenes.push($(imagen).attr('data-image-large-src'));
     }
 
-    const descripcion = $('div.product-description').text().trim();
+    const description = $('div.product-description').text().trim();
+
+    const summary = $('div.product-description-short').text().trim();
+
+    const details = summary + '\n' + description;
 
     // intentar obtener la marca de la informacion en la pagina.
     let marca = $('img.manufacturer-logo').attr('src');
     // todo integrar con servicio de mapeo / diccionario para traducir el link a un string de marca conocido.
-    // todo fallback si no hay entonces consultar con IA.
-    if (!marca) {
-      marca = 'FAILED-TO-GET-BRAND';
-    }
-    // todo job has to include meta information: categoria
-    // for now I linked the job to the root url which has this information as to avoid having stale info on here.
+    marca = await this.dictionaryService.getDictionaryDefinition(marca);
 
-    // debe ser aqui esto? o en el save job data?
+    // todo move this to save product maybe.
     const fingerprint_data = nombre + 'kpc';
 
     const hash = this.utils.hash(fingerprint_data);
@@ -139,7 +140,7 @@ export class KpcService implements IshopAdapter<KPC_JobDataType> {
       tienda_id,
       imagenes,
       precioNumerico,
-      descripcion,
+      details,
       marca,
     );
 
