@@ -57,7 +57,6 @@ export class AiService implements OnModuleInit {
       config: {
         temperature: 0.7,
         topP: 0.9,
-        maxOutputTokens: 1000,
       },
     });
 
@@ -71,16 +70,36 @@ export class AiService implements OnModuleInit {
         },
       });
     } else {
-      await this.logs.log('gemini-response-error', JSON.stringify(response));
-      await this.logs.log('gemini-response-error-prompt', prompt);
-      await this.prisma.products.update({
-        where: {
-          id: product.id,
-        },
-        data: {
-          keywords: '', // makes it so that it skips this row.
+      // try again with another model (smarter model with less rate limit, only use for these scenarios / edge cases)
+      const fallback = await this.ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+          topP: 0.9,
         },
       });
+      if (typeof fallback.text === 'string') {
+        await this.prisma.products.update({
+          where: {
+            id: product.id,
+          },
+          data: {
+            keywords: fallback.text.trim(),
+          },
+        });
+      } else {
+        await this.logs.log('gemini-response-error', JSON.stringify(response));
+        await this.logs.log('gemini-response-error-prompt', prompt);
+        await this.prisma.products.update({
+          where: {
+            id: product.id,
+          },
+          data: {
+            keywords: '', // sets empty string as to be able for me to find it and not be processed and not influence the search.
+          },
+        });
+      }
     }
   }
 
