@@ -142,9 +142,14 @@ ORDER BY s.shop_id,
       .catch((err) => console.log('Failed to log telemetry'));
   }
 
+  brand_task_error_count = 0;
   @Cron('15 * * * * *')
   async brandTask() {
     this.logSystemStatus('Brand Task');
+    if (this.brand_task_error_count > 5) {
+      console.log('too many errors, skip');
+      return;
+    }
     const telemetry = performance.now();
     try {
       await this.aiService.inferBrand();
@@ -156,6 +161,7 @@ ORDER BY s.shop_id,
           stack: err.stack,
         }),
       );
+      this.brand_task_error_count++;
     }
     void this.logs
       .taskTelemetry('brand-inference-task', performance.now() - telemetry)
