@@ -57,10 +57,9 @@ export class AiService implements OnModuleInit {
       config: {
         temperature: 0.7,
         topP: 0.9,
+        maxOutputTokens: 1000,
       },
     });
-
-    console.log(JSON.stringify(response));
 
     if (typeof response.text === 'string') {
       await this.prisma.products.update({
@@ -73,7 +72,15 @@ export class AiService implements OnModuleInit {
       });
     } else {
       await this.logs.log('gemini-response-error', JSON.stringify(response));
-      throw new Error('Response is not a string');
+      await this.logs.log('gemini-response-error-prompt', prompt);
+      await this.prisma.products.update({
+        where: {
+          id: product.id,
+        },
+        data: {
+          keywords: '', // makes it so that it skips this row.
+        },
+      });
     }
   }
 
@@ -120,7 +127,6 @@ export class AiService implements OnModuleInit {
         topP: 1,
       },
     });
-    console.log(response.text.trim());
 
     await this.prisma.products.update({
       where: {
