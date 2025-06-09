@@ -212,6 +212,7 @@ export class SearchService implements OnModuleInit {
         tienda: true,
       },
     });
+    result['precio'] = result.precios[0]?.value ?? 0;
 
     // analytics
     const telemetry_end = performance.now();
