@@ -44,12 +44,18 @@ export class LogService {
     search: string,
     result_count: number,
     time_taken: number,
+    time_taken_flexsearch: number,
+    time_taken_prisma: number,
+    time_taken_fuzzysort: number,
   ) {
     await this.prisma.searchTelemetry.create({
       data: {
         search,
         result_count,
         time_taken,
+        time_taken_flexsearch,
+        time_taken_prisma,
+        time_taken_fuzzysort,
       },
     });
   }

@@ -53,11 +53,13 @@ export class SearchService implements OnModuleInit {
 
   async search(query: string) {
     const telemetry_start = performance.now();
+    const telemetry_flexsearch_start = performance.now();
     const ids = (await this.index.search({
       query,
       limit: 1000,
     })) as string[];
-
+    const telemetry_flexsearch = performance.now() - telemetry_flexsearch_start;
+    const telemetry_prisma_start = performance.now();
     const results = (
       await this.prisma.products.findMany({
         select: {
@@ -109,7 +111,8 @@ export class SearchService implements OnModuleInit {
         precio,
       };
     });
-
+    const telemetry_prisma = performance.now() - telemetry_prisma_start;
+    const telemetry_fuzzysort_start = performance.now();
     const keys = ['name', 'keywords', 'categoria_keywords'];
     const boosts = [1, 4, 4]; // more than 1 is worse match score. lower increases match score.
     // 4 = 25% of weight.
@@ -126,10 +129,17 @@ export class SearchService implements OnModuleInit {
         },
       })
       .map((result) => this.removeKeywords(result.obj));
-
-    const telemetry_end = performance.now();
+    const telemetry_fuzzysort = performance.now() - telemetry_fuzzysort_start;
+    const telemetry = performance.now() - telemetry_start;
     void this.logs
-      .searchTelemetry(query, results.length, telemetry_end - telemetry_start)
+      .searchTelemetry(
+        query,
+        results.length,
+        telemetry,
+        telemetry_flexsearch,
+        telemetry_prisma,
+        telemetry_fuzzysort,
+      )
       .catch((err) => console.error('log failed', err));
     return sorted_results;
   }
