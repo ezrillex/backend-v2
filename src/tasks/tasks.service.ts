@@ -115,9 +115,14 @@ ORDER BY s.shop_id,
     }
   }
 
+  keywords_task_error_count = 0;
   @Cron('45 * * * * *')
   async keywordsTask() {
     this.logSystemStatus('Keywords Task');
+    if (this.keywords_task_error_count > 5) {
+      console.log('too many errors, skip');
+      return;
+    }
     const telemetry = performance.now();
     // todo errors is > 5 stop task and notify
     try {
@@ -130,6 +135,7 @@ ORDER BY s.shop_id,
           stack: err.stack,
         }),
       );
+      this.keywords_task_error_count++;
     }
     void this.logs
       .taskTelemetry('keyword-inference-task', performance.now() - telemetry)

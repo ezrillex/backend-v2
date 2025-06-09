@@ -100,10 +100,13 @@ export class SearchService implements OnModuleInit {
       })
     ).map((result) => {
       const categoria_keywords = result.categoria.keywords;
+      const precio = result.precios[0]?.value ?? 0;
       delete result.categoria;
+      delete result.precios;
       return {
         ...result,
         categoria_keywords,
+        precio,
       };
     });
 
@@ -133,7 +136,7 @@ export class SearchService implements OnModuleInit {
 
   removeKeywords(obj: any) {
     delete obj.keywords;
-    delete obj.categoria;
+    // delete obj.categoria; // creo que ya lo borro alla arriba.
     delete obj.categoria_keywords;
     return obj;
   }

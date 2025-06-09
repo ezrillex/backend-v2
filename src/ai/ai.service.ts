@@ -2,12 +2,14 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { NetworkService } from '../core/network/network.service';
 import { GoogleGenAI } from '@google/genai';
 import { PrismaService } from '../core/prisma/prisma.service';
+import { LogService } from '../core/log/log.service';
 
 @Injectable()
 export class AiService implements OnModuleInit {
   constructor(
     private readonly networkService: NetworkService,
     private readonly prisma: PrismaService,
+    private readonly logs: LogService,
   ) {}
 
   onModuleInit() {
@@ -57,16 +59,22 @@ export class AiService implements OnModuleInit {
         topP: 0.9,
       },
     });
-    console.log(response.text.trim());
 
-    await this.prisma.products.update({
-      where: {
-        id: product.id,
-      },
-      data: {
-        keywords: response.text.trim(),
-      },
-    });
+    console.log(JSON.stringify(response));
+
+    if (typeof response.text === 'string') {
+      await this.prisma.products.update({
+        where: {
+          id: product.id,
+        },
+        data: {
+          keywords: response.text.trim(),
+        },
+      });
+    } else {
+      await this.logs.log('gemini-response-error', JSON.stringify(response));
+      throw new Error('Response is not a string');
+    }
   }
 
   async inferBrand() {
