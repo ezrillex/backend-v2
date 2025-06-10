@@ -60,57 +60,98 @@ export class SearchService implements OnModuleInit {
     })) as string[];
     const telemetry_flexsearch = performance.now() - telemetry_flexsearch_start;
     const telemetry_prisma_start = performance.now();
-    const results = (
-      await this.prisma.products.findMany({
-        select: {
-          id: true,
-          name: true,
-          keywords: true,
-          categoria: {
-            select: {
-              keywords: true,
-            },
-          },
-          precios: {
-            select: {
-              value: true,
-            },
-            orderBy: {
-              created_at: 'desc',
-            },
-            take: 1, // is this limit?
-          },
-          tienda: {
-            select: {
-              name: true,
-            },
-          },
-          imagenes: {
-            select: {
-              id: true,
-              bucket: true,
-            },
-            take: 1,
-          },
-        },
+    // const results = (
+    //   await this.prisma.products.findMany({
+    //     select: {
+    //       id: true,
+    //       name: true,
+    //       keywords: true,
+    //       categoria: {
+    //         select: {
+    //           keywords: true,
+    //         },
+    //       },
+    //       precios: {
+    //         select: {
+    //           value: true,
+    //         },
+    //         orderBy: {
+    //           created_at: 'desc',
+    //         },
+    //         take: 1,
+    //       },
+    //       tienda: {
+    //         select: {
+    //           name: true,
+    //         },
+    //       },
+    //       imagenes: {
+    //         select: {
+    //           id: true,
+    //           bucket: true,
+    //         },
+    //         take: 1,
+    //       },
+    //     },
+    //
+    //     where: {
+    //       id: {
+    //         in: ids,
+    //       },
+    //     },
+    //   })
+    // )
+    // .map((result) => {
+    //   const categoria_keywords = result.categoria.keywords;
+    //   const precio = result.precios[0]?.value ?? 0;
+    //   delete result.categoria;
+    //   delete result.precios;
+    //   return {
+    //     ...result,
+    //     categoria_keywords,
+    //     precio,
+    //   };
+    // });
 
-        where: {
-          id: {
-            in: ids,
-          },
-        },
-      })
-    ).map((result) => {
-      const categoria_keywords = result.categoria.keywords;
-      const precio = result.precios[0]?.value ?? 0;
-      delete result.categoria;
-      delete result.precios;
-      return {
-        ...result,
-        categoria_keywords,
-        precio,
-      };
-    });
+    const results: {
+      id: string;
+      name: string;
+      keywords: string;
+      categoria_keywords: string;
+      precio: string;
+      tienda_name: string;
+      imagen_id: string;
+      imagen_bucket: string;
+    }[] = await this.prisma.$queryRaw`
+  SELECT 
+    p.id,
+    p.name,
+    p.keywords,
+    c.keywords AS categoria_keywords,
+    pr.value AS precio,
+    s.name AS tienda_name,
+    i.id AS imagen_id,
+    i.bucket AS imagen_bucket
+  FROM "Products" p
+  LEFT JOIN "Categories" c ON p.categoria_id = c.id
+  LEFT JOIN LATERAL (
+    SELECT value
+    FROM "Prices"
+    WHERE producto_id = p.id
+    ORDER BY created_at DESC
+    LIMIT 1
+  ) pr ON true
+  LEFT JOIN "Shops" s ON p.tienda_id = s.id
+  LEFT JOIN LATERAL (
+    SELECT id, bucket
+    FROM "Images"
+    WHERE producto_id = p.id
+    ORDER BY id ASC
+    LIMIT 1
+  ) i ON true
+  WHERE p.id = ANY(${ids});
+`;
+
     const telemetry_prisma = performance.now() - telemetry_prisma_start;
     const telemetry_fuzzysort_start = performance.now();
     const keys = ['name', 'keywords', 'categoria_keywords'];
@@ -154,72 +195,139 @@ export class SearchService implements OnModuleInit {
   async getCategory(id: string) {
     const telemetry_start = performance.now();
 
-    const results = await this.prisma.categories.findUnique({
-      select: {
-        name: true,
-        productos: {
-          // todo reuse this as is same as search query at least this select section.
-          select: {
-            id: true,
-            name: true,
-            precios: {
-              select: {
-                value: true,
-              },
-              orderBy: {
-                created_at: 'desc',
-              },
-              take: 1, // is this limit?
-            },
-            tienda: {
-              select: {
-                name: true,
-              },
-            },
-            imagenes: {
-              select: {
-                id: true,
-                bucket: true,
-              },
-              take: 1,
-            },
-          },
-        },
-      },
-      where: {
-        id: id,
-      },
+    const cat_name = await this.prisma.categories.findUnique({
+      select: { name: true },
+      where: { id: id },
     });
+
+    if (!cat_name) {
+      const telemetry_end = performance.now();
+      void this.logs
+        .getCategoryProductsTelemetry(id, 0, telemetry_end - telemetry_start)
+        .catch((err) => console.error('log failed', err));
+      throw new NotFoundException('Category ID not found');
+    }
+
+    // const results = await this.prisma.categories.findUnique({
+    //   select: {
+    //     name: true,
+    //     productos: {
+    //       select: {
+    //         id: true,
+    //         name: true,
+    //         precios: {
+    //           select: {
+    //             value: true,
+    //           },
+    //           orderBy: {
+    //             created_at: 'desc',
+    //           },
+    //           take: 1, // is this limit?
+    //         },
+    //         tienda: {
+    //           select: {
+    //             name: true,
+    //           },
+    //         },
+    //         imagenes: {
+    //           select: {
+    //             id: true,
+    //             bucket: true,
+    //           },
+    //           take: 1,
+    //         },
+    //       },
+    //     },
+    //   },
+    //   where: {
+    //     id: id,
+    //   },
+    // });
+    const results: {
+      id: string;
+      name: string;
+      precio: number;
+      tienda_name: string;
+      imagen_id: string;
+      imagen_bucket: number;
+    }[] = await this.prisma.$queryRaw`
+      SELECT
+        p.id AS id,
+        p.name AS name,
+        pr.value AS precio,
+        s.name AS tienda_name,
+        i.id AS imagen_id,
+        i.bucket AS imagen_bucket
+      FROM "Products" p
+             LEFT JOIN LATERAL (
+        SELECT value
+        FROM "Prices"
+        WHERE producto_id = p.id
+        ORDER BY created_at DESC
+          LIMIT 1
+  ) pr ON true
+        LEFT JOIN "Shops" s ON s.id = p.tienda_id
+        LEFT JOIN LATERAL (
+        SELECT id, bucket
+        FROM "Images"
+        WHERE producto_id = p.id
+        ORDER BY id ASC
+        LIMIT 1
+        ) i ON true
+      WHERE p.categoria_id = ${id}
+    `;
 
     const telemetry_end = performance.now();
     void this.logs
       .getCategoryProductsTelemetry(
         id,
-        results ? results.productos.length : 0,
+        results ? results.length : 0,
         telemetry_end - telemetry_start,
       )
       .catch((err) => console.error('log failed', err));
 
-    if (!results) {
-      throw new NotFoundException('Product ID not found');
-    } else {
-      return results;
-    }
+    return {
+      category_name: cat_name.name,
+      products: results,
+    };
   }
 
   async getProduct(id: string) {
     const telemetry_start = performance.now();
     const result = await this.prisma.products.findUnique({
       where: { id },
-      include: {
-        categoria: true,
-        imagenes: true,
+      select: {
+        name: true,
+        marca: true,
+        modelo: true,
+        details: true,
+        url: true,
+        last_updated: true,
+        // categoria: { // not displayed right now. omitting this for now.
+        //   select: {
+        //     name: true,
+        //   },
+        // },
+        imagenes: {
+          select: {
+            id: true,
+            bucket: true,
+          },
+        },
         precios: {
+          select: {
+            value: true,
+            created_at: true,
+          },
           orderBy: {
             created_at: 'desc',
           },
         },
-        tienda: true,
+        tienda: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
     result['precio'] = result.precios[0]?.value ?? 0;
