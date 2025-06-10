@@ -78,7 +78,6 @@ export class SearchService implements OnModuleInit {
       limit: 1000,
     })) as string[];
     const telemetry_flexsearch = performance.now() - telemetry_flexsearch_start;
-    const telemetry_prisma_start = performance.now();
 
     // todo if we go back to this remove keywords fields.
     // const results = (
@@ -133,11 +132,11 @@ export class SearchService implements OnModuleInit {
     //     precio,
     //   };
     // });
-
-    const telStart = performance.now();
-    const results = await this.getProductsKeywords(ids);
-    console.log('got keywords in: ', performance.now() - telStart, 'ms');
     const telemetry_fuzzysort_start = performance.now();
+
+    // const telStart = performance.now();
+    const results = await this.getProductsKeywords(ids);
+    // console.log('got keywords in: ', performance.now() - telStart, 'ms');
     const keys = ['name', 'keywords', 'categoria_keywords'];
     const boosts = [1, 4, 4]; // more than 1 is worse match score. lower increases match score.
     // 4 = 25% of weight.
@@ -155,6 +154,7 @@ export class SearchService implements OnModuleInit {
       })
       .map((result) => result.obj.id);
     const telemetry_fuzzysort = performance.now() - telemetry_fuzzysort_start;
+    const telemetry_prisma_start = performance.now();
 
     const data: {
       id: string;

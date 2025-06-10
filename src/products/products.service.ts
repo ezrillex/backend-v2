@@ -47,6 +47,7 @@ export class ProductsService {
             },
           },
           categoria_id: categoria, // since new categories, update this as well.
+          // todo this updates the category but index is not updated to grab these keywords instead.
           imagenes: {
             createMany: {
               data: img_urls_objects,
