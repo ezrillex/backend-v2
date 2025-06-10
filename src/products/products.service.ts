@@ -90,7 +90,11 @@ export class ProductsService {
         },
       });
       // add to index
-      await this.searchService.addNewProductToIndex(record.id, record.name);
+      await this.searchService.addNewProductToIndex(
+        record.id,
+        record.name,
+        record.categoria_id,
+      );
     }
   }
 }
