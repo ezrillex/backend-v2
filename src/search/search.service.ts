@@ -193,10 +193,6 @@ export class SearchService implements OnModuleInit {
 
     const telemetry_prisma = performance.now() - telemetry_prisma_start;
 
-    console.log('telemetry_prisma in: ', telemetry_prisma);
-    console.log('telemetry_fuzzysort in: ', telemetry_fuzzysort);
-    console.log('telemetry_flexsearch in ', telemetry_flexsearch);
-
     const telemetry = performance.now() - telemetry_start;
     void this.logs
       .searchTelemetry(
