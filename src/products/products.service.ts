@@ -46,6 +46,7 @@ export class ProductsService {
               value: precio,
             },
           },
+          categoria_id: categoria, // since new categories, update this as well.
           imagenes: {
             createMany: {
               data: img_urls_objects,
