@@ -138,6 +138,9 @@ export class AppController {
         id: true,
         name: true,
       },
+      orderBy: {
+        name: 'asc',
+      },
     });
   }
 
