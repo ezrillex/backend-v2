@@ -6,7 +6,7 @@ export const options = {
   scenarios: {
     stress_test: {
       executor: 'constant-arrival-rate',
-      rate: 150,
+      rate: 650,
       timeUnit: '1s',
       preAllocatedVUs: 500,
       duration: '1m',
@@ -32,4 +32,5 @@ export const options = {
 export default () => {
   // http.get('[REDACTED]');
   http.get('[REDACTED]');
+  // http.get('[REDACTED]');
 };

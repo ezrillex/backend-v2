@@ -57,6 +57,9 @@ export class AiService implements OnModuleInit {
       config: {
         temperature: 0.7,
         topP: 0.9,
+        httpOptions: {
+          timeout: 30_000,
+        },
       },
     });
 
@@ -77,6 +80,9 @@ export class AiService implements OnModuleInit {
         config: {
           temperature: 0.7,
           topP: 0.9,
+          httpOptions: {
+            timeout: 30_000,
+          },
         },
       });
       if (typeof fallback.text === 'string') {
