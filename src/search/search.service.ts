@@ -190,8 +190,10 @@ export class SearchService implements OnModuleInit {
         ORDER BY id ASC
         LIMIT 1
         ) i ON true
-      WHERE p.id = ANY(${sorted_ids}::uuid[]);
+      WHERE p.id = ANY(${sorted_ids});
     `;
+
+    //WHERE p.id = ANY(${sorted_ids}::uuid[]);
 
     const telemetry_prisma = performance.now() - telemetry_prisma_start;
 
