@@ -15,10 +15,13 @@ export class ImagesService implements OnModuleInit {
 
   async onModuleInit() {
     console.log('logging in to web disk client...');
-    this.webdav_client = createClient('[REDACTED]', {
-      username: 'cdn_manager@0001329.xyz',
-      password: '[REDACTED]',
-    });
+    this.webdav_client = createClient(
+      '[REDACTED]',
+      {
+        username: 'cdn_manager@0001329.xyz',
+        password: '[REDACTED]',
+      },
+    );
     console.log('checking buckets exists');
     await this.check_buckets_exist();
     console.log('done');
