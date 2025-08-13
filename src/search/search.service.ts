@@ -28,8 +28,8 @@ export class SearchService implements OnModuleInit {
     const start = performance.now();
 
     this.index = new Index<string>({
-      tokenize: 'full',
-      encoder: Charset.LatinExtra,
+      tokenize: 'tolerant',
+      encoder: Charset.LatinBalance,
     });
 
     const product_names = await this.prisma.products.findMany({
@@ -76,8 +76,10 @@ export class SearchService implements OnModuleInit {
     const ids = (await this.index.search({
       query,
       limit: 1000,
+      suggest: true,
     })) as string[];
     const telemetry_flexsearch = performance.now() - telemetry_flexsearch_start;
+    console.log(ids[0]);
 
     // todo if we go back to this remove keywords fields.
     // const results = (
@@ -138,7 +140,7 @@ export class SearchService implements OnModuleInit {
     const results = await this.getProductsKeywords(ids);
     // console.log('got keywords in: ', performance.now() - telStart, 'ms');
     const keys = ['name', 'keywords', 'categoria_keywords'];
-    const boosts = [1, 4, 4]; // more than 1 is worse match score. lower increases match score.
+    const boosts = [1, 1, 1]; // more than 1 is worse match score. lower increases match score.
     // 4 = 25% of weight.
 
     const sorted_ids: string[] = fuzzysort
@@ -188,7 +190,7 @@ export class SearchService implements OnModuleInit {
         ORDER BY id ASC
         LIMIT 1
         ) i ON true
-      WHERE p.id = ANY(${sorted_ids});
+      WHERE p.id = ANY(${sorted_ids}::uuid[]);
     `;
 
     const telemetry_prisma = performance.now() - telemetry_prisma_start;
@@ -323,6 +325,13 @@ export class SearchService implements OnModuleInit {
         marca: true,
         modelo: true,
         details: true,
+        // //todo disable this later
+        // keywords: true,
+        // categoria: {
+        //   select: {
+        //     keywords: true,
+        //   },
+        // },
         url: true,
         last_updated: true,
         // categoria: { // not displayed right now. omitting this for now.
@@ -352,7 +361,12 @@ export class SearchService implements OnModuleInit {
         },
       },
     });
-    result['precio'] = result.precios[0]?.value ?? 0;
+    // fix unhandled error in frontend.
+    if (result.precios && result.precios.length > 0) {
+      result['precio'] = result.precios[0].value;
+    } else {
+      result['precio'] = 0;
+    }
 
     // analytics
     const telemetry_end = performance.now();
@@ -361,6 +375,8 @@ export class SearchService implements OnModuleInit {
       .getProductTelemetry(id, !!result, telemetry_end - telemetry_start)
       .catch((err) => console.error('log failed', err));
 
+    // console.log(result.keywords);
+    // console.log(result.categoria.keywords);
     if (!result) {
       throw new NotFoundException('Product ID not found');
     } else {

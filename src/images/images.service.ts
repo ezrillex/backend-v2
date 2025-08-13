@@ -22,6 +22,80 @@ export class ImagesService implements OnModuleInit {
     console.log('checking buckets exists');
     await this.check_buckets_exist();
     console.log('done');
+    console.log('checking files integrity');
+    // await this.check_files_integrity();
+    console.log('done');
+  }
+
+  async check_files_integrity() {
+    const image_ids = await this.prisma.images
+      .findMany({
+        select: {
+          id: true,
+        },
+      })
+      .then((data) => data.map((image) => image.id));
+
+    const contents: FileStat[] = (await this.webdav_client.getDirectoryContents(
+      process.env.WEB_DISK_BASE_PATH,
+      {
+        deep: false,
+        details: false,
+      },
+    )) as FileStat[];
+
+    const omit = ['.well-known', 'cgi-bin', 'test.jpg', '000dev', '000docs'];
+
+    const buckets = contents.filter((item) => !omit.includes(item.basename));
+
+    // console.log(buckets);
+
+    const actual_files_ids: string[] = [];
+    const orphan_files: { id: string; path: string }[] = [];
+    for (const bucket of buckets) {
+      const bucket_start = performance.now();
+      console.log('processing bucket: ', bucket);
+      const files = (await this.webdav_client.getDirectoryContents(
+        bucket.filename,
+        {
+          deep: false,
+          details: false,
+        },
+      )) as FileStat[];
+      for (const file of files) {
+        const file_id = file.basename.replace('.webp', '');
+        actual_files_ids.push(file_id);
+        if (!image_ids.includes(file_id)) {
+          // console.log('image file does not exist in db: ', file_id);
+          orphan_files.push({
+            id: file_id,
+            path: file.filename,
+          });
+        }
+      }
+      console.log(
+        'bucket ',
+        bucket.filename,
+        ' took: ',
+        performance.now() - bucket_start,
+        ' ms',
+      );
+    }
+    const missing_image_files: string[] = [];
+    for (const image_id of image_ids) {
+      if (!actual_files_ids.includes(image_id)) {
+        missing_image_files.push(image_id);
+        // console.log(
+        //   'image file in db does not exist in actual files: ',
+        //   image_id,
+        // );
+      }
+    }
+
+    console.log('actual file count: ', actual_files_ids.length);
+    console.log('images in db count: ', image_ids.length);
+    console.log('file exists but not in db count: ', orphan_files.length);
+    console.log('missing image file count: ', missing_image_files.length);
   }
 
   async check_buckets_exist() {
