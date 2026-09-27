@@ -30,7 +30,9 @@ export const options = {
 };
 
 export default () => {
-  // http.get('[REDACTED]');
-  http.get('[REDACTED]');
-  // http.get('[REDACTED]');
+  const targetBaseUrl = __ENV.TARGET_BASE_URL;
+  if (!targetBaseUrl) {
+    throw new Error('TARGET_BASE_URL must be configured');
+  }
+  http.get(`${targetBaseUrl.replace(/\/$/, '')}/search/procesador%20ryzen`);
 };

@@ -15,6 +15,22 @@ export type ZD_JobDataType = {
   slug?: string;
 };
 
+function getZdApiBaseUrl() {
+  const baseUrl = process.env.ZD_API_BASE_URL;
+  if (!baseUrl) {
+    throw new Error('ZD_API_BASE_URL must be configured');
+  }
+  return baseUrl.replace(/\/$/, '');
+}
+
+function getZdProductBaseUrl() {
+  const baseUrl = process.env.ZD_PRODUCT_BASE_URL;
+  if (!baseUrl) {
+    throw new Error('ZD_PRODUCT_BASE_URL must be configured');
+  }
+  return baseUrl.replace(/\/$/, '');
+}
+
 @Injectable()
 export class ZdService implements IshopAdapter<ZD_JobDataType> {
   constructor(
@@ -82,7 +98,7 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
     }
 
     const { status, data } = await this.networkService.post(
-      `[REDACTED]`,
+      `${getZdApiBaseUrl()}/api/ecommerce/filters/${page_string}`,
       request_data,
     );
 
@@ -118,7 +134,7 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
 
   async handleProduct(slug: string, category_id: string, tienda_id: string) {
     const { status, data } = await this.networkService.get(
-      `[REDACTED]`,
+      `${getZdApiBaseUrl()}/api/ecommerce/show_product/${slug}`,
     );
 
     const product = data.product;
@@ -134,7 +150,7 @@ export class ZdService implements IshopAdapter<ZD_JobDataType> {
 
     const name = product.title;
 
-    const url = '[REDACTED]' + product.slug;
+    const url = `${getZdProductBaseUrl()}/product/${product.slug}`;
 
     let brand = product.marca?.name ?? '';
     if (brand) {

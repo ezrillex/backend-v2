@@ -36,6 +36,14 @@ export class ImagesService implements OnModuleInit {
     console.log('done');
   }
 
+  private getCdnBaseUrl() {
+    const cdnBaseUrl = process.env.CDN_BASE_URL;
+    if (!cdnBaseUrl) {
+      throw new Error('CDN_BASE_URL must be configured');
+    }
+    return cdnBaseUrl.replace(/\/$/, '');
+  }
+
   async check_files_integrity() {
     const image_ids = await this.prisma.images
       .findMany({
@@ -205,7 +213,7 @@ export class ImagesService implements OnModuleInit {
       // success
       console.log('succesfully uploaded image:');
       console.log(
-        `[REDACTED]`,
+        `${this.getCdnBaseUrl()}${process.env.WEB_DISK_BASE_PATH}${bucketString}/${id}.webp`,
       );
       // update image record with bucket number.
       await this.prisma.images.update({

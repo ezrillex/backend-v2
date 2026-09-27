@@ -33,40 +33,6 @@ export class AppController {
     private readonly utils: UtilsService,
   ) {}
 
-  // @Get('debug')
-  // async debug() {
-  //   await this.schedulerService.createJob(
-  //     'PRODUCT',
-  //     '9ef29768-e8bb-42e0-92d3-06f86801553f',
-  //     {
-  //       url: '[REDACTED]',
-  //     },
-  //   );
-  // }
-
-  //
-  // @Get('debug_page')
-  // debugPage() {
-  //   return this.kpc.scrape(
-  //     {
-  //       url: '[REDACTED]',
-  //     },
-  //     1n,
-  //     2n,
-  //     1n,
-  //     'PAGE',
-  //   );
-  // }
-
-  // @Get('debug_kpc')
-  // async testDebugScheduler() {
-  //   await this.kpc.handleProduct(
-  //     '[REDACTED]',
-  //     'ignoreme',
-  //     'ignoreme',
-  //   );
-  // }
-  //
   // @Get('debug_search')
   // async testDebugSearch(@Query('query') query: string) {
   //   // todo sanitization!!!
