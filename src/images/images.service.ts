@@ -15,11 +15,17 @@ export class ImagesService implements OnModuleInit {
 
   async onModuleInit() {
     console.log('logging in to web disk client...');
+    const webDiskUrl = process.env.WEB_DISK_URL;
+    const webDiskUsername = process.env.WEB_DISK_USERNAME;
+    const webDiskPassword = process.env.WEB_DISK_PASSWORD;
+    if (!webDiskUrl || !webDiskUsername || !webDiskPassword) {
+      throw new Error('WEB_DISK_URL, WEB_DISK_USERNAME, and WEB_DISK_PASSWORD must be configured');
+    }
     this.webdav_client = createClient(
-      '[REDACTED]',
+      webDiskUrl,
       {
-        username: 'cdn_manager@0001329.xyz',
-        password: '[REDACTED]',
+        username: webDiskUsername,
+        password: webDiskPassword,
       },
     );
     console.log('checking buckets exists');
